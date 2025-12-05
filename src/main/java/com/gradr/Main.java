@@ -1,5 +1,6 @@
 package com.gradr;
 
+import java.io.IOException;
 import java.util.Scanner;
 
 public class Main {
@@ -12,6 +13,9 @@ public class Main {
         int choice;
         Student student;
         Subject subject;
+        Grade grade;
+
+        String studentId;
 
         do {
             displayMainMenu();
@@ -146,21 +150,21 @@ public class Main {
                     System.out.println();
 
                     System.out.print("Enter Student ID: ");
-                    String studentId = scanner.nextLine();
+                    studentId = scanner.nextLine();
                     System.out.println();
 
-                    Student foundStudent = studentManager.findStudent(studentId);
+                    student = studentManager.findStudent(studentId);
 
-                    if (foundStudent == null) {
+                    if (student == null) {
                         System.out.println("Invalid ID. Student with this ID does not exist");
                         System.out.println();
                         break;
                     }
 
                     System.out.println("Student Details:");
-                    System.out.printf("Name: %s\n", foundStudent.getName());
-                    System.out.printf("Type: %s Student\n", foundStudent.getStudentType());
-                    System.out.printf("Current Average: %.1f%%\n", foundStudent.calculateAverageGrade());
+                    System.out.printf("Name: %s\n", student.getName());
+                    System.out.printf("Type: %s Student\n", student.getStudentType());
+                    System.out.printf("Current Average: %.1f%%\n", student.calculateAverageGrade());
                     System.out.println();
 
                     System.out.println("Subject type:");
@@ -232,7 +236,7 @@ public class Main {
                     scanner.nextLine();
 
                     // Validating the grade
-                    Grade grade = new Grade(studentId, subject, gradeInput);
+                    grade = new Grade(studentId, subject, gradeInput);
 
                     // Used recordGrade because it validates if the grade can be recorded
                     if (grade.recordGrade(gradeInput)) {
@@ -241,7 +245,7 @@ public class Main {
                         System.out.println("GRADE CONFIRMATION");
                         System.out.println("_______________________________________________________");
                         System.out.printf("Grade ID: %s\n", grade.getGradeId());
-                        System.out.printf("Student: %s - %s\n", studentId, foundStudent.getName());
+                        System.out.printf("Student: %s - %s\n", studentId, student.getName());
                         System.out.printf("Subject: %s (%s)\n", subject.getSubjectName(), subject.getSubjectType());
                         System.out.printf("Grade: %.1f%%\n", (double) gradeInput);
                         System.out.printf("Date: %s\n", grade.getDate());
@@ -276,11 +280,11 @@ public class Main {
                     System.out.println();
 
                     System.out.print("Enter Student ID: ");
-                    String studentIdForReport = scanner.nextLine();
+                    studentId = scanner.nextLine();
                     System.out.println();
 
                     // Get student using ID and display student details
-                    Student studentForReport = studentManager.findStudent(studentIdForReport);
+                    Student studentForReport = studentManager.findStudent(studentId);
 
                     //If there is a student associated with the ID, continue, else
                     // display an error message
@@ -291,7 +295,7 @@ public class Main {
                             // Using the condition, studentGrade != null, so it doesn't throw an error when
                             // the student has no grades recorded for the display of student
                             // details
-                            if (studentGrade != null && studentGrade.getStudentId().equals(studentIdForReport)) {
+                            if (studentGrade != null && studentGrade.getStudentId().equals(studentId)) {
                                 hasGrades = true;
                                 break;
                             }
@@ -303,10 +307,10 @@ public class Main {
                         System.out.printf("Type: %s Student\n", studentForReport.getStudentType());
 
                         if (hasGrades) {
-                            System.out.printf("Current Average: %.1f%%\n", gradeManager.calculateOverallAverage(studentIdForReport));
+                            System.out.printf("Current Average: %.1f%%\n", gradeManager.calculateOverallAverage(studentId));
 
                             // Check if student is passing (average grade is greater than passing grade)
-                             boolean isPassing = studentForReport.isPassing(gradeManager.calculateOverallAverage(studentIdForReport));
+                             boolean isPassing = studentForReport.isPassing(gradeManager.calculateOverallAverage(studentId));
 
                              if (isPassing) {
                                  System.out.print("Status: PASSING\n");
@@ -314,7 +318,10 @@ public class Main {
                                  System.out.print("Status: FAILING\n");
                              }
 
-                            gradeManager.viewGradesByStudent(studentIdForReport);
+                            System.out.println();
+
+                            //gradeManager.viewGradesByStudent(studentId);
+                            System.out.println(gradeManager.viewGradesByStudent(studentId));
 
                             // Displaying the student's performance summary
                             System.out.println("Performance Summary:");
@@ -331,9 +338,9 @@ public class Main {
                             // For when student has no grades recorded
                             System.out.printf("Passing Grade: %.0f%%\n", studentForReport.getPassingGrade());
 
-                            gradeManager.viewGradesByStudent(studentIdForReport);
+                            //gradeManager.viewGradesByStudent(studentId);
+                            System.out.println(gradeManager.viewGradesByStudent(studentId));
                         }
-                        System.out.println();
 
                     } else {
                         System.out.println("Invalid Student ID. Student with this ID does not exist");
@@ -343,6 +350,124 @@ public class Main {
 
                     break;
                 case 5:
+                    System.out.println("EXPORT GRADE REPORT");
+                    System.out.println("_______________________________________________");
+                    System.out.println();
+
+                    System.out.printf("Enter Student ID: ");
+                    studentId = scanner.nextLine();
+                    System.out.println();
+
+                    student = studentManager.findStudent(studentId);
+
+                    // student not found exception
+                    if (student == null) {
+                        System.out.println("Invalid ID. Student with this ID does not exist");
+                        System.out.println();
+                        break;
+                    }
+
+                    System.out.printf("Student: %s - %s\n", student.getStudentId(), student.getName());
+                    System.out.printf("Type: %s Student\n", student.getStudentType());
+                    // Grades are added for subjects so this works for the number of grades
+                    System.out.printf("Total Grades: %d\n", student.getEnrolledSubjectsCount());
+                    System.out.println();
+
+                    System.out.println("Export options:");
+                    System.out.println("1. Summary Report (overview only)");
+                    System.out.println("2. Detailed Report (all grades)");
+                    System.out.println("3. Both");
+                    System.out.println();
+
+                    System.out.printf("Select option (1-3): ");
+                    int exportOption = scanner.nextInt();
+                    scanner.nextLine();
+
+                    if (exportOption >= 1 && exportOption <= 3) {
+                        System.out.printf("Enter filename (without extension): ");
+                        String fileName = scanner.nextLine();
+                        System.out.println();
+
+                        try{
+                            FileExporter exporter = new FileExporter(fileName);
+                            StringBuilder content= new StringBuilder();
+
+                            content.append("==================================================\n");
+                            content.append("                   GRADE REPORT                   \n");
+                            content.append("==================================================\n\n");
+
+                            // Added option 3 for when user wants BOTH
+                            if (exportOption == 1 || exportOption == 3) {
+                                // SUMMARY REPORT
+                                content.append("                SUMMARY REPORT                \n\n");
+                                content.append(String.format("Student ID: %s\n", student.getStudentId()));
+                                content.append(String.format("Name: %s\n", student.getName()));
+                                content.append(String.format("Type: %s\n", student.getStudentType()));
+                                content.append(String.format("Total Subjects: %d\n", student.getEnrolledSubjectsCount()));
+
+                                // Adding student summary
+                                double average = student.calculateAverageGrade();
+                                content.append(String.format("Overall Average: %.2f\n", average));
+
+                                // Performance analysis
+                                content.append("\nPerformance Analysis:\n");
+                                if (average >= 85) {
+                                    content.append("- Excellent performance\n");
+                                } else if (average >= 70) {
+                                    content.append("- Good performance\n");
+                                } else if (average >= 50) {
+                                    content.append("- Satisfactory performance\n");
+                                } else {
+                                    content.append("- Needs improvement\n");
+                                }
+                                content.append("\n");
+                            }
+
+                            if (exportOption == 2 || exportOption == 3) {
+                                if (exportOption == 3) {
+                                    content.append("==================================================\n");
+                                }
+
+                                content.append("                DETAILED REPORT                \n\n");
+                                content.append(String.format("Student ID: %s\n", student.getStudentId()));
+                                content.append(String.format("Name: %s\n", student.getName()));
+                                content.append(String.format("Type: %s\n", student.getStudentType()));
+
+                                content.append("All Grades:\n");
+                                content.append("==================================================\n");
+                                content.append(gradeManager.viewGradesByStudent(studentId));
+
+                                content.append("\n");
+                                double average = student.calculateAverageGrade();
+                                content.append(String.format("Overall Average: %.2f\n", average));
+
+                            }
+
+                            content.append("==================================================\n");
+                            content.append("                  End of Report                 \n\n");
+                            content.append("==================================================\n");
+
+                            exporter.exportGradeToTXT(content.toString());
+
+                            System.out.println("Report exported successfully!");
+                            System.out.printf("File: %s.txt\n", fileName);
+                            System.out.println("Location: ./reports/");
+                            System.out.println("Size: 2.4 KB"); // change to the size of the file
+                            System.out.printf("Contains: %d grades, averages, performance summary\n", student.getEnrolledSubjectsCount()); // change to what it actually contains
+                            System.out.println();
+
+                        } catch (IOException e) {
+                            // Change to custom exception
+                            System.out.println("Error generating report: " + e.getMessage());
+                            System.out.println();
+                        }
+                    } else {
+                        // Add a menu option exception here
+                        System.out.println("Invalid input.");
+                    }
+
+                    break;
+                case 10:
                     System.out.println("Thank you for using Student Grade Management System!");
                     System.out.println("Goodbye!");
                     break;
@@ -350,7 +475,7 @@ public class Main {
                     System.out.println("Invalid choice. Please try again.");
                     System.out.println();
             }
-        } while (choice != 5);
+        } while (choice != 10);
 
         scanner.close();
     }
@@ -366,7 +491,12 @@ public class Main {
         System.out.println("2. View Students");
         System.out.println("3. Record Grade");
         System.out.println("4. View Grade Report");
-        System.out.println("5. Exit");
+        System.out.println("5. Export Grade Report [NEW]");
+        System.out.println("6. Calculate Student GPA [NEW]");
+        System.out.println("7. Bulk Import Grades [NEW]");
+        System.out.println("8. View Class Statistics [NEW]");
+        System.out.println("9. Search Students [NEW]");
+        System.out.println("10. Exit");
         System.out.println();
     }
 
