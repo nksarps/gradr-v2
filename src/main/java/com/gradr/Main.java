@@ -467,6 +467,36 @@ public class Main {
                     }
 
                     break;
+                case 6:
+                    System.out.println("CALCULATE STUDENT GPA");
+                    System.out.println("_______________________________________________");
+                    System.out.println();
+
+                    System.out.print("Enter Student ID: ");
+                    studentId = scanner.nextLine();
+                    System.out.println();
+
+                    student = studentManager.findStudent(studentId);
+
+                    if (student == null) {
+                        System.out.println("Invalid ID. Student with this ID does not exist");
+                        System.out.println();
+                        break;
+                    }
+
+                    // Check if student has any grades
+                    if (student.getEnrolledSubjectsCount() == 0) {
+                        System.out.println("No grades recorded for this student yet.");
+                        System.out.println();
+                        break;
+                    }
+
+                    // Create GPA calculator and generate report
+                    GPACalculator gpaCalculator = new GPACalculator(gradeManager);
+                    String gpaReport = gpaCalculator.generateGPAReport(studentId, student, studentManager);
+                    System.out.println(gpaReport);
+
+                    break;
                 case 10:
                     System.out.println("Thank you for using Student Grade Management System!");
                     System.out.println("Goodbye!");
