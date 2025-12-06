@@ -354,7 +354,7 @@ public class Main {
                     System.out.println("_______________________________________________");
                     System.out.println();
 
-                    System.out.printf("Enter Student ID: ");
+                    System.out.print("Enter Student ID: ");
                     studentId = scanner.nextLine();
                     System.out.println();
 
@@ -379,12 +379,12 @@ public class Main {
                     System.out.println("3. Both");
                     System.out.println();
 
-                    System.out.printf("Select option (1-3): ");
+                    System.out.print("Select option (1-3): ");
                     int exportOption = scanner.nextInt();
                     scanner.nextLine();
 
                     if (exportOption >= 1 && exportOption <= 3) {
-                        System.out.printf("Enter filename (without extension): ");
+                        System.out.print("Enter filename (without extension): ");
                         String fileName = scanner.nextLine();
                         System.out.println();
 
@@ -495,6 +495,24 @@ public class Main {
                     GPACalculator gpaCalculator = new GPACalculator(gradeManager);
                     String gpaReport = gpaCalculator.generateGPAReport(studentId, student, studentManager);
                     System.out.println(gpaReport);
+
+                    break;
+                case 8:
+                    System.out.println("VIEW CLASS STATISTICS");
+                    System.out.println("_______________________________________________");
+                    System.out.println();
+
+                    // Check if there are any grades recorded
+                    if (gradeManager.getGradeCount() == 0) {
+                        System.out.println("No grades recorded yet. Statistics unavailable.");
+                        System.out.println();
+                        break;
+                    }
+
+                    // Create ClassStatistics instance and generate report
+                    StatisticsCalculator classStats = new StatisticsCalculator(gradeManager, studentManager);
+                    String statsReport = classStats.generateClassStatistics();
+                    System.out.println(statsReport);
 
                     break;
                 case 10:
