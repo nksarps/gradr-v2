@@ -515,6 +515,177 @@ public class Main {
                     System.out.println(statsReport);
 
                     break;
+                case 9:
+                    System.out.println("SEARCH STUDENTS");
+                    System.out.println("_______________________________________________");
+                    System.out.println();
+
+                    System.out.println("Search options:");
+                    System.out.println("1. By Student ID");
+                    System.out.println("2. By name (partial match)");
+                    System.out.println("3. By Grade Range");
+                    System.out.println("4. By Student Type");
+                    System.out.println();
+
+                    System.out.print("Select option (1-4): ");
+                    int searchOption = scanner.nextInt();
+                    scanner.nextLine();
+                    System.out.println();
+
+                    if (searchOption >= 1 && searchOption <= 4) {
+                        if (searchOption == 1) { // Exact match by student ID
+                            System.out.print("Enter Student ID: ");
+                            studentId = scanner.nextLine();
+
+                            student = studentManager.findStudent(studentId);
+
+                            if (student != null) {// If a student is found
+                                // Display student details. Add more details here if need be
+                                System.out.printf("Student ID: %s\n", student.getStudentId());
+                                System.out.printf("Name: %s\n", student.getName());
+                                System.out.printf("Type: %s\n", student.getStudentType());
+                                System.out.printf("Age: %d\n", student.getAge());
+                                System.out.printf("Email: %s\n", student.getEmail());
+                                System.out.printf("Passing Grade: %d%%\n", (int) student.getPassingGrade());
+                                System.out.printf("Average: %.2f\n", student.calculateAverageGrade());
+                                System.out.println();
+                            } else {// Return a custom student not found exception here
+                                System.out.println("Student with this ID does not exist");
+                                System.out.println();
+                            }
+                        } else if (searchOption == 2) {// Search by name (partial match)
+                            System.out.print("Enter name (partial or full): ");
+                            String searchName = scanner.nextLine();
+
+                            Student[] students = studentManager.getStudents();
+
+                            if (students.length > 0) {
+                                System.out.println("----------------------------------------------------------------------------|");
+                                System.out.println("STU ID   | NAME                    | TYPE               | AVG GRADE         |");
+                                System.out.println("----------------------------------------------------------------------------|");
+
+                                int match = 0;
+
+                                for (Student s : students) {
+                                    if (s == null) continue;
+
+                                    if (s.getName().contains(searchName)) {
+                                        System.out.printf("%-8s | %-23s | %-18s | %-17.1f%%\n",
+                                                s.getStudentId(), s.getName(), s.getStudentType(), s.calculateAverageGrade());
+                                        match++;
+                                    }
+                                }
+                                System.out.println();
+
+                                // if no student matches the search
+                                if (match == 0) {// throw a custom exception here
+                                    System.out.println("No student matches the name you entered");
+                                    System.out.println();
+                                } else {
+                                    // add action choice code
+                                }
+                            } else {// add a custom exception here for no students being added
+                                System.out.println("No students have been added");
+                            }
+                        } else if (searchOption == 3) {// Search by grade range
+                            System.out.print("Enter the maximum grade range: ");
+                            int maxGrade = scanner.nextInt();
+                            scanner.nextLine();
+                            System.out.println();
+
+                            System.out.print("Enter the minimum grade range: ");
+                            int minGrade = scanner.nextInt();
+                            scanner.nextLine();
+                            System.out.println();
+
+                            Student[] students = studentManager.getStudents();
+
+                            if (students.length > 0) {
+                                System.out.println("----------------------------------------------------------------------------|");
+                                System.out.println("STU ID   | NAME                    | TYPE               | AVG GRADE         |");
+                                System.out.println("----------------------------------------------------------------------------|");
+
+                                int match = 0;
+
+                                for (Student s : students) {
+                                    if (s == null) continue;
+
+                                    double avg = s.calculateAverageGrade();
+                                    if (avg >= minGrade && avg <= maxGrade) {
+                                        System.out.printf("%-8s | %-23s | %-18s | %-17.1f%%\n",
+                                                s.getStudentId(), s.getName(), s.getStudentType(), avg);
+                                        match++;
+                                    }
+                                }
+                                System.out.println("----------------------------------------------------------------------------|");
+                                System.out.println("SEARCH RESULTS (" + match + " found with grades between " + minGrade + "% and " + maxGrade + "%)");
+                                System.out.println();
+
+                                if (match == 0) {
+                                    System.out.println("No students found in the specified grade range");
+                                    System.out.println();
+                                }
+                            } else {
+                                System.out.println("No students have been added");
+                                System.out.println();
+                            }
+
+                        } else {
+                            System.out.println("Select Student Type:");
+                            System.out.println("1. Regular");
+                            System.out.println("2. Honors");
+
+                            System.out.print("Enter choice (1-2): ");
+                            int typeChoice = scanner.nextInt();
+                            scanner.nextLine();
+                            System.out.println();
+
+                            String searchType;
+
+                            if (typeChoice == 1) {
+                                searchType = "Regular";
+                            } else if (typeChoice == 2) {
+                                searchType = "Honors";
+                            } else {
+                                System.out.println("Invalid choice entered");
+                                break;
+                            }
+
+                            Student[] students = studentManager.getStudents();
+
+                            if (students.length > 0) {
+                                System.out.println("----------------------------------------------------------------------------|");
+                                System.out.println("STU ID   | NAME                    | TYPE               | AVG GRADE         |");
+                                System.out.println("----------------------------------------------------------------------------|");
+
+                                int match = 0;
+
+                                for (Student s : students) {
+                                    if (s == null) continue;
+
+                                    if (s.getStudentType().equalsIgnoreCase(searchType)) {
+                                        System.out.printf("%-8s | %-23s | %-18s | %-17.1f%%\n",
+                                                s.getStudentId(), s.getName(), s.getStudentType(), s.calculateAverageGrade());
+                                        match++;
+                                    }
+                                }
+                                System.out.println("----------------------------------------------------------------------------|");
+                                System.out.println("SEARCH RESULTS (" + match + " " + searchType + " students found)");
+                                System.out.println();
+
+                                if (match == 0) {
+                                    System.out.println("No " + searchType + " students found");
+                                    System.out.println();
+                                }
+                            } else {
+                                System.out.println("No students have been added");
+                                System.out.println();
+                            }
+                        }
+                    } else {// Throw a custom input menu choice exception here
+                        System.out.println("Invalid search option entered. Try again.");
+                    }
+                    break;
                 case 10:
                     System.out.println("Thank you for using Student Grade Management System!");
                     System.out.println("Goodbye!");
