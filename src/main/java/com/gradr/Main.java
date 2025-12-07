@@ -11,7 +11,7 @@ import java.util.InputMismatchException;
 import java.util.Scanner;
 
 public class Main {
-    public static void main(String[] args) throws StudentNotFoundException, CSVParseException {
+    public static void main(String[] args) throws StudentNotFoundException {
         Scanner scanner = new Scanner(System.in);
 
         StudentManager studentManager = new StudentManager();
@@ -600,11 +600,11 @@ public class Main {
                         // data (StudentID, SubjectName, SubjectType, Grade)
                         ArrayList<String[]> gradeData = csvParser.parseGradeCSV();
 
-                        // If there are no rows in the CSV file, break out of the case
+                        // If there are no rows in the CSV file, throw InvalidFileFormatException
                         if (gradeData.isEmpty()) {
-                            System.out.println("No valid data found in CSV file.");
-                            System.out.println();
-                            break;
+                            throw new InvalidFileFormatException(
+                                    "X ERROR: InvalidFileFormatException\n   No valid data found in CSV file.\n   Please check the file format and content."
+                            );
                         }
 
                         System.out.println("Processing grades...");
@@ -627,35 +627,35 @@ public class Main {
                             // more understandable
                             int lineNumber = i + 2;
 
-                            // data[0] because student id is the first element in the data (String) array
-                            Student studentCheck = studentManager.findStudent(data[0]);
-
-                            if (studentCheck == null) {
-                                failCount++;
-                                failedRecords.add(String.format("Row %d: Invalid student ID (%s)", lineNumber, data[0]));
-                                continue;
-                            }
-
-                            // Validate entry format
-                            if (!csvParser.validateGradeEntry(data)) {
-                                failCount++;
-
-                                // Check specific validation failure reason
-                                try {
-                                    double gradeValue = Double.parseDouble(data[3]);
-                                    if (gradeValue < 0 || gradeValue > 100) {
-                                        failedRecords.add(String.format("Row %d: Grade out of range (%s)", lineNumber, data[3]));
-                                    } else {
-                                        failedRecords.add(String.format("Row %d: Invalid data format", lineNumber));
-                                    }
-                                } catch (NumberFormatException e) {
-                                    failedRecords.add(String.format("Row %d: Invalid grade value", lineNumber));
-                                }
-                                continue;
-                            }
-
-                            // Import valid grade
                             try {
+                                // data[0] because student id is the first element in the data (String) array
+                                Student studentCheck = studentManager.findStudent(data[0]);
+
+                                if (studentCheck == null) {
+                                    failCount++;
+                                    failedRecords.add(String.format("Row %d: Invalid student ID (%s)", lineNumber, data[0]));
+                                    continue;
+                                }
+
+                                // Validate entry format
+                                if (!csvParser.validateGradeEntry(data)) {
+                                    failCount++;
+
+                                    // Check specific validation failure reason
+                                    try {
+                                        double gradeValue = Double.parseDouble(data[3]);
+                                        if (gradeValue < 0 || gradeValue > 100) {
+                                            failedRecords.add(String.format("Row %d: Grade out of range (%s)", lineNumber, data[3]));
+                                        } else {
+                                            failedRecords.add(String.format("Row %d: Invalid data format", lineNumber));
+                                        }
+                                    } catch (NumberFormatException e) {
+                                        failedRecords.add(String.format("Row %d: Invalid grade value", lineNumber));
+                                    }
+                                    continue;
+                                }
+
+                                // Import valid grade
                                 String stuId = data[0];
                                 String parsedSubjectName = data[1];
                                 String parsedSubjectType = data[2];
@@ -680,6 +680,9 @@ public class Main {
                                     failCount++;
                                     failedRecords.add(String.format("Row %d: Failed to record grade", lineNumber));
                                 }
+                            } catch (StudentNotFoundException e) {
+                                failCount++;
+                                failedRecords.add(String.format("Row %d: Invalid student ID (%s)", lineNumber, data[0]));
                             } catch (Exception e) {
                                 failCount++;
                                 failedRecords.add(String.format("Row %d: Processing error", lineNumber));
@@ -737,12 +740,14 @@ public class Main {
 
                         System.out.println();
 
+                    } catch (InvalidFileFormatException e) {
+                        System.out.println(e.getMessage());
+                        System.out.println();
                     } catch (IOException e) {
-                        throw new CSVParseException(
-                                "X ERROR: CSVParseException\\n Please check the file exists in ./imports/ directory."
-                        );
+                        System.out.println("X ERROR: CSVParseException\n   Failed to read CSV file: " + fileName + ".csv\n   Please check the file exists in ./imports/ directory.");
+                        System.out.println();
                     } catch (Exception e) {
-                        System.out.println("Error processing CSV file: " + e.getMessage());
+                        System.out.println("X ERROR: " + e.getClass().getSimpleName() + "\n   Error processing CSV file: " + e.getMessage());
                         System.out.println();
                     }
 
