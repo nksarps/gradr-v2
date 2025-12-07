@@ -1,6 +1,7 @@
 package com.gradr;
 
 import com.gradr.exceptions.InvalidGradeException;
+import com.gradr.exceptions.InvalidMenuChoiceException;
 import com.gradr.exceptions.StudentNotFoundException;
 
 import java.io.IOException;
@@ -8,6 +9,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.InputMismatchException;
 import java.util.Scanner;
 
 public class Main {
@@ -17,7 +19,7 @@ public class Main {
         StudentManager studentManager = new StudentManager();
         GradeManager gradeManager = new GradeManager();
 
-        int choice;
+        int choice = 0;
         Student student = null;
         Subject subject;
         Grade grade;
@@ -27,75 +29,94 @@ public class Main {
         do {
             displayMainMenu();
 
-            System.out.print("Enter choice: ");
-            choice = scanner.nextInt();
-            scanner.nextLine();
-            System.out.println();
+            try {
+                System.out.print("Enter choice: ");
+                choice = scanner.nextInt();
+                scanner.nextLine();
+                System.out.println();
+            } catch (InputMismatchException e) {
+                System.out.println(
+                        "X ERROR: InvalidMenuChoiceException\n   Please enter a valid number (1-10).\n"
+                );
+                scanner.nextLine();
+                break;
+            }
 
             switch (choice) {
                 case 1:
-                    System.out.println("ADD STUDENT");
-                    System.out.println("_______________________________________________");
-                    System.out.println();
+                    try{
+                        System.out.println("ADD STUDENT");
+                        System.out.println("_______________________________________________");
+                        System.out.println();
 
-                    System.out.print("Enter student name: ");
-                    String name = scanner.nextLine();
+                        System.out.print("Enter student name: ");
+                        String name = scanner.nextLine();
 
-                    System.out.print("Enter student age: ");
-                    int age = scanner.nextInt();
-                    scanner.nextLine();
+                        System.out.print("Enter student age: ");
+                        int age = scanner.nextInt();
+                        scanner.nextLine();
 
-                    System.out.print("Enter student email: ");
-                    String email = scanner.nextLine();
+                        System.out.print("Enter student email: ");
+                        String email = scanner.nextLine();
 
-                    System.out.print("Enter student phone: ");
-                    String phone = scanner.nextLine();
-                    System.out.println();
+                        System.out.print("Enter student phone: ");
+                        String phone = scanner.nextLine();
+                        System.out.println();
 
-                    System.out.println("Student type:");
-                    System.out.println("1. Regular Student (Passing grade: 50%)");
-                    System.out.println("2. Honors Student: (Passing grade: 60%, honors recognition)");
-                    System.out.println();
+                        System.out.println("Student type:");
+                        System.out.println("1. Regular Student (Passing grade: 50%)");
+                        System.out.println("2. Honors Student: (Passing grade: 60%, honors recognition)");
+                        System.out.println();
 
-                    System.out.print("Select type (1-2): ");
-                    int studentType = scanner.nextInt();
-                    scanner.nextLine();
-                    System.out.println();
+                        System.out.print("Select type (1-2): ");
+                        int studentType = scanner.nextInt();
+                        scanner.nextLine();
+                        System.out.println();
 
-                    if (studentType == 1) {
-                        student = new RegularStudent(name, age, email, phone);
-                    } else if (studentType == 2) {
-                        student = new HonorsStudent(name, age, email, phone);
-                    } else {
-                        System.out.println("Invalid student type.");
-                        break;
+                        if (studentType == 1) {
+                            student = new RegularStudent(name, age, email, phone);
+                        } else if (studentType == 2) {
+                            student = new HonorsStudent(name, age, email, phone);
+                        } else {
+                            throw new InvalidMenuChoiceException(
+                                    "X ERROR: InvalidMenuChoiceException\n   Please select a valid option (1-2).\n   You entered: " + studentType
+                            );
+                        }
+
+                        // Adding a student to the array
+                        studentManager.addStudent(student);
+
+                        // Setting grade manager after creating student to be able to access the student's grades
+                        //  inside the student class
+                        student.setGradeManager(gradeManager);
+
+                        System.out.println("Student added successfully!");
+
+                        System.out.printf("Student ID: %s\n", student.getStudentId());
+                        System.out.printf("Name: %s\n", student.getName());
+                        System.out.printf("Type: %s\n", student.getStudentType());
+                        System.out.printf("Age: %d\n", student.getAge());
+                        System.out.printf("Email: %s\n", student.getEmail());
+                        System.out.printf("Passing Grade: %d%%\n", (int) student.getPassingGrade());
+
+                        if (student.getStudentType().equals("Honors")) {
+                            HonorsStudent honorsStudent = (HonorsStudent) student;
+                            String isEligible = honorsStudent.checkHonorsEligibility();
+
+                            System.out.printf("Honors Eligible: %s\n", isEligible);
+                        }
+                        System.out.printf("Status: %s\n", student.getStatus());
+
+                        System.out.println();
+                    } catch (InputMismatchException e) {
+                        System.out.println("X ERROR: InvalidMenuChoiceException\n   Please enter a valid number (1-2).\n");
+                        scanner.nextLine(); // Clear invalid input
+                        System.out.println();
+                    } catch (InvalidMenuChoiceException e) {
+                        System.out.println(e.getMessage());
+                        System.out.println();
                     }
 
-                    // Adding a student to the array
-                    studentManager.addStudent(student);
-
-                    // Setting grade manager after creating student to be able to access the student's grades
-                    //  inside the student class
-                    student.setGradeManager(gradeManager);
-
-                    System.out.println("Student added successfully!");
-
-                    System.out.printf("Student ID: %s\n", student.getStudentId());
-                    System.out.printf("Name: %s\n", student.getName());
-                    System.out.printf("Type: %s\n", student.getStudentType());
-                    System.out.printf("Age: %d\n", student.getAge());
-                    System.out.printf("Email: %s\n", student.getEmail());
-                    System.out.printf("Passing Grade: %d%%\n", (int) student.getPassingGrade());
-
-                    if (student.getStudentType().equals("Honors")) {
-                        HonorsStudent honorsStudent = (HonorsStudent) student;
-                        String isEligible = honorsStudent.checkHonorsEligibility();
-
-                        System.out.printf("Honors Eligible: %s\n", isEligible);
-                    }
-                    System.out.printf("Status: %s\n", student.getStatus());
-
-                    System.out.println();
                     break;
                 case 2:
                     // For checking the number of student types displayed when the students in the system
@@ -163,12 +184,6 @@ public class Main {
                     try {
                         student = studentManager.findStudent(studentId);
 
-                        if (student == null) {
-                            System.out.println("Invalid ID. Student with this ID does not exist");
-                            System.out.println();
-                            break;
-                        }
-
                         System.out.println("Student Details:");
                         System.out.printf("Name: %s\n", student.getName());
                         System.out.printf("Type: %s Student\n", student.getStudentType());
@@ -180,18 +195,26 @@ public class Main {
                         System.out.println("2. Elective Subject (Music, Art, Physical Education)\n");
 
                         System.out.print("Select type (1-2): ");
-                        int subjectTypeChoice = scanner.nextInt();
-                        scanner.nextLine();
+                        int subjectTypeChoice;
 
-                        // Setting subject type for displaying Available Subjects
+                        try {
+                            subjectTypeChoice = scanner.nextInt();
+                            scanner.nextLine();
+                        } catch (InputMismatchException e) {
+                            System.out.println("\nX ERROR: InvalidMenuChoiceException\n   Please enter a valid number (1-2).\n");
+                            scanner.nextLine(); // Clear invalid input
+                            break;
+                        }
+
                         String subjectType;
                         if (subjectTypeChoice == 1) {
                             subject = new CoreSubject();
                         } else if (subjectTypeChoice == 2) {
                             subject = new ElectiveSubject();
                         } else {
-                            System.out.println("Invalid subject type entered");
-                            break;
+                            throw new InvalidMenuChoiceException(
+                                    "X ERROR: InvalidMenuChoiceException\n   Please select a valid option (1-2).\n   You entered: " + subjectTypeChoice
+                            );
                         }
 
                         System.out.println();
@@ -210,43 +233,62 @@ public class Main {
 
                         System.out.println();
 
-                        System.out.print("Select subject: ");
-                        int subjectChoice = scanner.nextInt();
-                        scanner.nextLine();
+                        System.out.print("Select subject (1-3): ");
+                        int subjectChoice = 0;
 
-                        if (subjectChoice == 1 || subjectChoice == 2 || subjectChoice == 3) {
-                            if (subjectTypeChoice == 1) {
-                                if (subjectChoice == 1) {
-                                    subject.setSubjectName("Mathematics");
-                                } else if (subjectChoice == 2) {
-                                    subject.setSubjectName("English");
-                                } else {
-                                    subject.setSubjectName("Science");
-                                }
+                        try {
+                            subjectChoice = scanner.nextInt();
+                            scanner.nextLine();
+                        } catch (InputMismatchException e) {
+                            System.out.println(
+                                    "\nX ERROR: InvalidMenuChoiceException\n   Please enter a valid number (1-3).\n"
+                            );
+                            scanner.nextLine();
+                            break;
+                        }
+
+                        if (subjectChoice < 1 || subjectChoice > 3) {
+                            throw new InvalidMenuChoiceException(
+                                    "X ERROR: InvalidMenuChoiceException\n   Please select a valid option (1-3).\n   You entered: " + subjectChoice
+                            );
+                        }
+
+                        if (subjectTypeChoice == 1) {
+                            if (subjectChoice == 1) {
+                                subject.setSubjectName("Mathematics");
+                            } else if (subjectChoice == 2) {
+                                subject.setSubjectName("English");
                             } else {
-                                if (subjectChoice == 1) {
-                                    subject.setSubjectName("Music");
-                                } else if (subjectChoice == 2) {
-                                    subject.setSubjectName("Art");
-                                } else {
-                                    subject.setSubjectName("Physical Education");
-                                }
+                                subject.setSubjectName("Science");
                             }
                         } else {
-                            System.out.println("Invalid subject choice");
-                            break;
+                            if (subjectChoice == 1) {
+                                subject.setSubjectName("Music");
+                            } else if (subjectChoice == 2) {
+                                subject.setSubjectName("Art");
+                            } else {
+                                subject.setSubjectName("Physical Education");
+                            }
                         }
 
                         System.out.println();
 
-                        System.out.print("Enter grade: ");
-                        int gradeInput = scanner.nextInt();
-                        scanner.nextLine();
+                        System.out.print("Enter grade (0-100): ");
+                        int gradeInput;
 
-                        // Validating the grade
+                        try {
+                            gradeInput = scanner.nextInt();
+                            scanner.nextLine();
+                        } catch (InputMismatchException e) {
+                            System.out.println(
+                                    "\nX ERROR: InvalidGradeException\n   Please enter a valid number (0-100).\n"
+                            );
+                            scanner.nextLine();
+                            break;
+                        }
+
                         grade = new Grade(studentId, subject, gradeInput);
 
-                        // Used recordGrade because it validates if the grade can be recorded
                         if (grade.recordGrade(gradeInput)) {
                             grade.setGradeId();
 
@@ -261,26 +303,27 @@ public class Main {
 
                             System.out.print("Confirm grade? (Y/N): ");
                             char confirmGrade = scanner.next().charAt(0);
+                            scanner.nextLine();
 
-                            if (confirmGrade == 'Y' || confirmGrade == 'N') {
-                                if (confirmGrade == 'Y') {
-                                    gradeManager.addGrade(grade);
-
-                                    System.out.println("Grade added successfully.\n");
-                                } else {
-                                    Grade.gradeCounter--;
-
-                                    System.out.println("Grade record cancelled\n");
-                                }
+                            if (confirmGrade == 'Y' || confirmGrade == 'y') {
+                                gradeManager.addGrade(grade);
+                                System.out.println("Grade added successfully.\n");
+                            } else if (confirmGrade == 'N' || confirmGrade == 'n') {
+                                Grade.gradeCounter--;
+                                System.out.println("Grade record cancelled\n");
                             } else {
                                 Grade.gradeCounter--;
-                                System.out.println("Invalid input.");
+                                throw new InvalidMenuChoiceException(
+                                        "X ERROR: InvalidMenuChoiceException\n   Please enter Y or N.\n   You entered: " + confirmGrade
+                                );
                             }
                         } else {
-                            System.out.println("Invalid grade entered");
-                            break;
+                            throw new InvalidGradeException(
+                                    "X ERROR: InvalidGradeException\n   Grade must be between 0 and 100.\n   You entered: " + gradeInput + "\n"
+                            );
                         }
-                    } catch (StudentNotFoundException | InvalidGradeException e) {
+
+                    } catch (StudentNotFoundException | InvalidMenuChoiceException | InvalidGradeException e) {
                         System.out.println(e.getMessage());
                         System.out.println();
                     }
@@ -379,13 +422,6 @@ public class Main {
                     try {
                         student = studentManager.findStudent(studentId);
 
-                        // student not found exception
-                        if (student == null) {
-                            System.out.println("Invalid ID. Student with this ID does not exist");
-                            System.out.println();
-                            break;
-                        }
-
                         System.out.printf("Student: %s - %s\n", student.getStudentId(), student.getName());
                         System.out.printf("Type: %s Student\n", student.getStudentType());
                         // Grades are added for subjects so this works for the number of grades
@@ -399,8 +435,16 @@ public class Main {
                         System.out.println();
 
                         System.out.print("Select option (1-3): ");
-                        int exportOption = scanner.nextInt();
-                        scanner.nextLine();
+                        int exportOption;
+
+                        try {
+                            exportOption = scanner.nextInt();
+                            scanner.nextLine();
+                        } catch (InputMismatchException e) {
+                            System.out.println("\nX ERROR: InvalidMenuChoiceException\n   Please enter a valid number (1-3).\n");
+                            scanner.nextLine();
+                            break;
+                        }
 
                         if (exportOption >= 1 && exportOption <= 3) {
                             System.out.print("Enter filename (without extension): ");
@@ -481,10 +525,11 @@ public class Main {
                                 System.out.println();
                             }
                         } else {
-                            // Add a menu option exception here
-                            System.out.println("Invalid input.");
+                            throw new InvalidMenuChoiceException(
+                                    "X ERROR: InvalidMenuChoiceException\n   Please select a valid option (1-3).\n   You entered: " + exportOption
+                            );
                         }
-                    } catch (StudentNotFoundException e) {
+                    } catch (StudentNotFoundException | InvalidMenuChoiceException e) {
                         System.out.println(e.getMessage());
                         System.out.println();
                     }
@@ -737,12 +782,22 @@ public class Main {
                     System.out.println("4. By Student Type");
                     System.out.println();
 
-                    System.out.print("Select option (1-4): ");
-                    int searchOption = scanner.nextInt();
-                    scanner.nextLine();
-                    System.out.println();
-
                     try {
+                        System.out.print("Select option (1-4): ");
+                        int searchOption;
+
+                        try {
+                            searchOption = scanner.nextInt();
+                            scanner.nextLine();
+                            System.out.println();
+                        } catch (InputMismatchException e) {
+                            System.out.println(
+                                    "X ERROR: InvalidMenuChoiceException\n   Please enter a valid number (1-4).\n"
+                            );
+                            scanner.nextLine();
+                            break;
+                        }
+
                         if (searchOption >= 1 && searchOption <= 4) {
                             if (searchOption == 1) { // Exact match by student ID
                                 System.out.print("Enter Student ID: ");
@@ -750,8 +805,7 @@ public class Main {
 
                                 student = studentManager.findStudent(studentId);
 
-                                if (student != null) {// If a student is found
-                                    // Display student details. Add more details here if need be
+                                if (student != null) {
                                     System.out.printf("Student ID: %s\n", student.getStudentId());
                                     System.out.printf("Name: %s\n", student.getName());
                                     System.out.printf("Type: %s\n", student.getStudentType());
@@ -759,9 +813,6 @@ public class Main {
                                     System.out.printf("Email: %s\n", student.getEmail());
                                     System.out.printf("Passing Grade: %d%%\n", (int) student.getPassingGrade());
                                     System.out.printf("Average: %.2f\n", student.calculateAverageGrade());
-                                    System.out.println();
-                                } else {// Return a custom student not found exception here
-                                    System.out.println("Student with this ID does not exist");
                                     System.out.println();
                                 }
                             } else if (searchOption == 2) {// Search by name (partial match)
@@ -792,22 +843,33 @@ public class Main {
                                     if (match == 0) {// throw a custom exception here
                                         System.out.println("No student matches the name you entered");
                                         System.out.println();
-                                    } else {
-                                        // add action choice code
                                     }
-                                } else {// add a custom exception here for no students being added
+                                } else {
                                     System.out.println("No students have been added");
                                 }
                             } else if (searchOption == 3) {// Search by grade range
-                                System.out.print("Enter the maximum grade range: ");
-                                int maxGrade = scanner.nextInt();
-                                scanner.nextLine();
-                                System.out.println();
-
                                 System.out.print("Enter the minimum grade range: ");
-                                int minGrade = scanner.nextInt();
-                                scanner.nextLine();
-                                System.out.println();
+                                int minGrade;
+                                try {
+                                    minGrade = scanner.nextInt();
+                                    scanner.nextLine();
+                                } catch (InputMismatchException e) {
+                                    System.out.println("\nX ERROR: InvalidMenuChoiceException\n   Please enter a valid number.\n");
+                                    scanner.nextLine();
+                                    break;
+                                }
+
+                                System.out.print("Enter the maximum grade range: ");
+                                int maxGrade;
+                                try {
+                                    maxGrade = scanner.nextInt();
+                                    scanner.nextLine();
+                                    System.out.println();
+                                } catch (InputMismatchException e) {
+                                    System.out.println("\nX ERROR: InvalidMenuChoiceException\n   Please enter a valid number.\n");
+                                    scanner.nextLine();
+                                    break;
+                                }
 
                                 Student[] students = studentManager.getStudents();
 
@@ -847,9 +909,19 @@ public class Main {
                                 System.out.println("2. Honors");
 
                                 System.out.print("Enter choice (1-2): ");
-                                int typeChoice = scanner.nextInt();
-                                scanner.nextLine();
-                                System.out.println();
+                                int typeChoice;
+
+                                try {
+                                    typeChoice = scanner.nextInt();
+                                    scanner.nextLine();
+                                    System.out.println();
+                                } catch (InputMismatchException e) {
+                                    System.out.println(
+                                            "X ERROR: InvalidMenuChoiceException\n   Please enter a valid number (1-2).\n"
+                                    );
+                                    scanner.nextLine();
+                                    break;
+                                }
 
                                 String searchType;
 
@@ -858,8 +930,9 @@ public class Main {
                                 } else if (typeChoice == 2) {
                                     searchType = "Honors";
                                 } else {
-                                    System.out.println("Invalid choice entered");
-                                    break;
+                                    throw new InvalidMenuChoiceException(
+                                            "X ERROR: InvalidMenuChoiceException\n   Please select a valid option (1-2).\n   You entered: " + typeChoice
+                                    );
                                 }
 
                                 Student[] students = studentManager.getStudents();
@@ -894,9 +967,11 @@ public class Main {
                                 }
                             }
                         } else {// Throw a custom input menu choice exception here
-                            System.out.println("Invalid search option entered. Try again.");
+                            throw new InvalidMenuChoiceException(
+                                    "X ERROR: InvalidMenuChoiceException\n   Please select a valid option (1-4).\n   You entered: " + searchOption
+                            );
                         }
-                    } catch (StudentNotFoundException e) {
+                    } catch (StudentNotFoundException | InvalidMenuChoiceException e) {
                         System.out.println(e.getMessage());
                         System.out.println();
                     }
@@ -906,8 +981,16 @@ public class Main {
                     System.out.println("Goodbye!");
                     break;
                 default:
-                    System.out.println("Invalid choice. Please try again.");
-                    System.out.println();
+                    try {
+                        throw new InvalidMenuChoiceException(
+                                "X ERROR: InvalidMenuChoiceException\n   Please select a valid option (1-10).\n   You entered: " + choice
+                        );
+                    } catch (InvalidMenuChoiceException e) {
+                        System.out.println(
+                                "X ERROR: InvalidMenuChoiceException\n   Please select a valid option (1-10).\n   You entered: " + choice
+                        );
+                        System.out.println();
+                    }
             }
         } while (choice != 10);
 
