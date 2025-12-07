@@ -1,6 +1,7 @@
 package com.gradr;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Scanner;
 
 public class Main {
@@ -495,6 +496,188 @@ public class Main {
                     GPACalculator gpaCalculator = new GPACalculator(gradeManager);
                     String gpaReport = gpaCalculator.generateGPAReport(studentId, student, studentManager);
                     System.out.println(gpaReport);
+
+                    break;
+                case 7:
+                    System.out.println("BULK IMPORT GRADES");
+                    System.out.println("_______________________________________________");
+                    System.out.println();
+
+                    System.out.println("Place your CSV file in: ./imports/");
+                    System.out.println();
+
+                    System.out.println("CSV Format Required:");
+                    System.out.println("StudentID,SubjectName,SubjectType,Grade");
+                    System.out.println("Example: STU001,Mathematics,Core,85");
+                    System.out.println();
+
+                    String csvFilePath = "./imports/";
+
+                    System.out.print("Enter filename (without extension): ");
+                    String fileName = scanner.nextLine();
+                    System.out.println();
+
+                    try {
+                        // Construct full file path with .csv extension
+                        String fullFilePath = csvFilePath + fileName + ".csv";
+
+                        System.out.println("Validating file... ✓");
+
+                        CSVParser csvParser = new CSVParser(fullFilePath);
+
+                        // Each element in gradeData is a String array representing on row of
+                        // data (StudentID, SubjectName, SubjectType, Grade)
+                        ArrayList<String[]> gradeData = csvParser.parseGradeCSV();
+
+                        // If there are no rows in the CSV file, break out of the case
+                        if (gradeData.isEmpty()) {
+                            System.out.println("No valid data found in CSV file.");
+                            System.out.println();
+                            break;
+                        }
+
+                        System.out.println("Processing grades...");
+                        System.out.println();
+
+                        // Tracking import results
+                        int successCount = 0;
+                        int failCount = 0;
+
+                        // Stores reports about failed imports
+                        ArrayList<String> failedRecords = new ArrayList<>();
+
+                        for (int i = 0; i < gradeData.size(); i++) {
+                            // Since each element in gradeData is a String array containing
+                            // the information. "data" retrieves the current row
+                            String[] data = gradeData.get(i);
+
+                            // Adding 2 because the header is skipped during parsing, and we want the array index i
+                            // to match the line numbers in the CSV file to make the failed import reports
+                            // more understandable
+                            int lineNumber = i + 2;
+
+                            // data[0] because student id is the first element in the data (String) array
+                            Student studentCheck = studentManager.findStudent(data[0]);
+
+                            if (studentCheck == null) {
+                                failCount++;
+                                failedRecords.add(String.format("Row %d: Invalid student ID (%s)", lineNumber, data[0]));
+                                continue;
+                            }
+
+                            // Validate entry format
+                            if (!csvParser.validateGradeEntry(data)) {
+                                failCount++;
+
+                                // Check specific validation failure reason
+                                try {
+                                    double gradeValue = Double.parseDouble(data[3]);
+                                    if (gradeValue < 0 || gradeValue > 100) {
+                                        failedRecords.add(String.format("Row %d: Grade out of range (%s)", lineNumber, data[3]));
+                                    } else {
+                                        failedRecords.add(String.format("Row %d: Invalid data format", lineNumber));
+                                    }
+                                } catch (NumberFormatException e) {
+                                    failedRecords.add(String.format("Row %d: Invalid grade value", lineNumber));
+                                }
+                                continue;
+                            }
+
+                            // Import valid grade
+                            try {
+                                String stuId = data[0];
+                                String parsedSubjectName = data[1];
+                                String parsedSubjectType = data[2];
+                                double gradeValue = Double.parseDouble(data[3]);
+
+                                // Create appropriate subject
+                                Subject subj;
+                                if (parsedSubjectType.equals("Core")) {
+                                    subj = new CoreSubject(parsedSubjectName, "");
+                                } else {
+                                    subj = new ElectiveSubject(parsedSubjectName, "");
+                                }
+
+                                // Create and add grade
+                                Grade newGrade = new Grade(stuId, subj, gradeValue);
+
+                                if (newGrade.recordGrade(gradeValue)) {
+                                    newGrade.setGradeId();
+                                    gradeManager.addGrade(newGrade);
+                                    successCount++;
+                                } else {
+                                    failCount++;
+                                    failedRecords.add(String.format("Row %d: Failed to record grade", lineNumber));
+                                }
+                            } catch (Exception e) {
+                                failCount++;
+                                failedRecords.add(String.format("Row %d: Processing error", lineNumber));
+                            }
+                        }
+
+                        // Display import summary
+                        System.out.println("IMPORT SUMMARY");
+                        System.out.println("_______________________________________________");
+                        System.out.printf("Total Rows: %d\n", gradeData.size());
+                        System.out.printf("Successfully Imported: %d\n", successCount);
+                        System.out.printf("Failed: %d\n", failCount);
+                        System.out.println();
+
+                        // Display failed records if any
+                        if (failCount > 0) {
+                            System.out.println("Failed Records:");
+                            for (String failedRecord : failedRecords) {
+                                System.out.println(failedRecord);
+                            }
+                            System.out.println();
+                        }
+
+                        // Generate import log
+                        if (successCount > 0) {
+                            System.out.println("Import completed!");
+                            System.out.printf("  %d grades added to system\n", successCount);
+
+                            // Create import log file
+                            try {
+                                String timestamp = java.time.LocalDateTime.now().format(
+                                        java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
+                                );
+                                String logFileName = "import_log_" + timestamp;
+                                FileExporter logExporter = new FileExporter(logFileName);
+
+                                StringBuilder logContent = new StringBuilder();
+                                logContent.append("BULK IMPORT LOG\n");
+                                logContent.append("_______________________________________________\n\n");
+                                logContent.append(String.format("Source File: %s.csv\n", fileName));
+                                logContent.append(String.format("Import Date: %s\n", java.time.LocalDate.now()));
+                                logContent.append(String.format("Total Rows: %d\n", gradeData.size()));
+                                logContent.append(String.format("Successfully Imported: %d\n", successCount));
+                                logContent.append(String.format("Failed: %d\n\n", failCount));
+
+                                if (failCount > 0) {
+                                    logContent.append("Failed Records:\n");
+                                    for (String failedRecord : failedRecords) {
+                                        logContent.append(failedRecord + "\n");
+                                    }
+                                }
+
+                                logExporter.exportGradeToTXT(logContent.toString());
+                                System.out.printf("  See import_log_%s.txt for details\n", timestamp);
+                            } catch (IOException e) {
+                                // Log file creation failed, but import was successful
+                            }
+                        }
+
+                        System.out.println();
+
+                    } catch (IOException e) {
+                        System.out.println("Error reading CSV file: " + e.getMessage());
+                        System.out.println("Please check the file exists in ./imports/ directory.");
+                        System.out.println();
+                    } catch (Exception e) {
+                        System.out.println("Error processing CSV file: " + e.getMessage());
+                        System.out.println();
+                    }
 
                     break;
                 case 8:
