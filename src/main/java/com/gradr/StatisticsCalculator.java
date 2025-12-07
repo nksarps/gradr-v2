@@ -1,5 +1,7 @@
 package com.gradr;
 
+import com.gradr.exceptions.StudentNotFoundException;
+
 public class StatisticsCalculator {
     private GradeManager gradeManager;
     private StudentManager studentManager;
@@ -13,7 +15,7 @@ public class StatisticsCalculator {
      * Generates a comprehensive class statistics report
      * @return Formatted string containing all class statistics
      */
-    public String generateClassStatistics() {
+    public String generateClassStatistics() throws StudentNotFoundException {
         StringBuilder report = new StringBuilder();
 
         report.append("CLASS STATISTICS\n");
@@ -155,7 +157,7 @@ public class StatisticsCalculator {
     /**
      * Generates highest and lowest grade information with student names
      */
-    private String generateHighestLowestGrades() {
+    private String generateHighestLowestGrades() throws StudentNotFoundException {
         StringBuilder result = new StringBuilder();
 
         Grade highestGrade = null;

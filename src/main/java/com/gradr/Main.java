@@ -1,18 +1,23 @@
 package com.gradr;
 
+import com.gradr.exceptions.StudentNotFoundException;
+
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Scanner;
 
 public class Main {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws StudentNotFoundException {
         Scanner scanner = new Scanner(System.in);
 
         StudentManager studentManager = new StudentManager();
         GradeManager gradeManager = new GradeManager();
 
         int choice;
-        Student student;
+        Student student = null;
         Subject subject;
         Grade grade;
 
@@ -154,124 +159,129 @@ public class Main {
                     studentId = scanner.nextLine();
                     System.out.println();
 
-                    student = studentManager.findStudent(studentId);
+                    try {
+                        student = studentManager.findStudent(studentId);
 
-                    if (student == null) {
-                        System.out.println("Invalid ID. Student with this ID does not exist");
+                        if (student == null) {
+                            System.out.println("Invalid ID. Student with this ID does not exist");
+                            System.out.println();
+                            break;
+                        }
+
+                        System.out.println("Student Details:");
+                        System.out.printf("Name: %s\n", student.getName());
+                        System.out.printf("Type: %s Student\n", student.getStudentType());
+                        System.out.printf("Current Average: %.1f%%\n", student.calculateAverageGrade());
                         System.out.println();
-                        break;
-                    }
 
-                    System.out.println("Student Details:");
-                    System.out.printf("Name: %s\n", student.getName());
-                    System.out.printf("Type: %s Student\n", student.getStudentType());
-                    System.out.printf("Current Average: %.1f%%\n", student.calculateAverageGrade());
-                    System.out.println();
+                        System.out.println("Subject type:");
+                        System.out.println("1. Core Subject (Mathematics, English, Science)");
+                        System.out.println("2. Elective Subject (Music, Art, Physical Education)\n");
 
-                    System.out.println("Subject type:");
-                    System.out.println("1. Core Subject (Mathematics, English, Science)");
-                    System.out.println("2. Elective Subject (Music, Art, Physical Education)\n");
+                        System.out.print("Select type (1-2): ");
+                        int subjectTypeChoice = scanner.nextInt();
+                        scanner.nextLine();
 
-                    System.out.print("Select type (1-2): ");
-                    int subjectTypeChoice = scanner.nextInt();
-                    scanner.nextLine();
-
-                    // Setting subject type for displaying Available Subjects
-                    String subjectType;
-                    if (subjectTypeChoice == 1) {
-                        subject = new CoreSubject();
-                    } else if (subjectTypeChoice == 2) {
-                        subject = new ElectiveSubject();
-                    } else {
-                        System.out.println("Invalid subject type entered");
-                        break;
-                    }
-
-                    System.out.println();
-
-                    subjectType = subject.getSubjectType();
-                    System.out.printf("Available %s Subjects\n", subjectType);
-                    if (subjectType.equals("Core")) {
-                        System.out.println("1. Mathematics");
-                        System.out.println("2. English");
-                        System.out.println("3. Science");
-                    } else {
-                        System.out.println("1. Music");
-                        System.out.println("2. Art");
-                        System.out.println("3. Physical Education");
-                    }
-
-                    System.out.println();
-
-                    System.out.print("Select subject: ");
-                    int subjectChoice = scanner.nextInt();
-                    scanner.nextLine();
-
-                    if (subjectChoice == 1 || subjectChoice == 2 || subjectChoice == 3) {
+                        // Setting subject type for displaying Available Subjects
+                        String subjectType;
                         if (subjectTypeChoice == 1) {
-                            if (subjectChoice == 1) {
-                                subject.setSubjectName("Mathematics");
-                            } else if (subjectChoice == 2) {
-                                subject.setSubjectName("English");
+                            subject = new CoreSubject();
+                        } else if (subjectTypeChoice == 2) {
+                            subject = new ElectiveSubject();
+                        } else {
+                            System.out.println("Invalid subject type entered");
+                            break;
+                        }
+
+                        System.out.println();
+
+                        subjectType = subject.getSubjectType();
+                        System.out.printf("Available %s Subjects\n", subjectType);
+                        if (subjectType.equals("Core")) {
+                            System.out.println("1. Mathematics");
+                            System.out.println("2. English");
+                            System.out.println("3. Science");
+                        } else {
+                            System.out.println("1. Music");
+                            System.out.println("2. Art");
+                            System.out.println("3. Physical Education");
+                        }
+
+                        System.out.println();
+
+                        System.out.print("Select subject: ");
+                        int subjectChoice = scanner.nextInt();
+                        scanner.nextLine();
+
+                        if (subjectChoice == 1 || subjectChoice == 2 || subjectChoice == 3) {
+                            if (subjectTypeChoice == 1) {
+                                if (subjectChoice == 1) {
+                                    subject.setSubjectName("Mathematics");
+                                } else if (subjectChoice == 2) {
+                                    subject.setSubjectName("English");
+                                } else {
+                                    subject.setSubjectName("Science");
+                                }
                             } else {
-                                subject.setSubjectName("Science");
+                                if (subjectChoice == 1) {
+                                    subject.setSubjectName("Music");
+                                } else if (subjectChoice == 2) {
+                                    subject.setSubjectName("Art");
+                                } else {
+                                    subject.setSubjectName("Physical Education");
+                                }
                             }
                         } else {
-                            if (subjectChoice == 1) {
-                                subject.setSubjectName("Music");
-                            } else if (subjectChoice == 2) {
-                                subject.setSubjectName("Art");
-                            } else {
-                                subject.setSubjectName("Physical Education");
-                            }
+                            System.out.println("Invalid subject choice");
+                            break;
                         }
-                    } else {
-                        System.out.println("Invalid subject choice");
-                        break;
-                    }
 
-                    System.out.println();
+                        System.out.println();
 
-                    System.out.print("Enter grade: ");
-                    int gradeInput = scanner.nextInt();
-                    scanner.nextLine();
+                        System.out.print("Enter grade: ");
+                        int gradeInput = scanner.nextInt();
+                        scanner.nextLine();
 
-                    // Validating the grade
-                    grade = new Grade(studentId, subject, gradeInput);
+                        // Validating the grade
+                        grade = new Grade(studentId, subject, gradeInput);
 
-                    // Used recordGrade because it validates if the grade can be recorded
-                    if (grade.recordGrade(gradeInput)) {
-                        grade.setGradeId();
+                        // Used recordGrade because it validates if the grade can be recorded
+                        if (grade.recordGrade(gradeInput)) {
+                            grade.setGradeId();
 
-                        System.out.println("GRADE CONFIRMATION");
-                        System.out.println("_______________________________________________________");
-                        System.out.printf("Grade ID: %s\n", grade.getGradeId());
-                        System.out.printf("Student: %s - %s\n", studentId, student.getName());
-                        System.out.printf("Subject: %s (%s)\n", subject.getSubjectName(), subject.getSubjectType());
-                        System.out.printf("Grade: %.1f%%\n", (double) gradeInput);
-                        System.out.printf("Date: %s\n", grade.getDate());
-                        System.out.println("______________________________________________________\n");
+                            System.out.println("GRADE CONFIRMATION");
+                            System.out.println("_______________________________________________________");
+                            System.out.printf("Grade ID: %s\n", grade.getGradeId());
+                            System.out.printf("Student: %s - %s\n", studentId, student.getName());
+                            System.out.printf("Subject: %s (%s)\n", subject.getSubjectName(), subject.getSubjectType());
+                            System.out.printf("Grade: %.1f%%\n", (double) gradeInput);
+                            System.out.printf("Date: %s\n", grade.getDate());
+                            System.out.println("______________________________________________________\n");
 
-                        System.out.print("Confirm grade? (Y/N): ");
-                        char confirmGrade = scanner.next().charAt(0);
+                            System.out.print("Confirm grade? (Y/N): ");
+                            char confirmGrade = scanner.next().charAt(0);
 
-                        if (confirmGrade == 'Y' || confirmGrade == 'N') {
-                            if (confirmGrade == 'Y') {
-                                gradeManager.addGrade(grade);
+                            if (confirmGrade == 'Y' || confirmGrade == 'N') {
+                                if (confirmGrade == 'Y') {
+                                    gradeManager.addGrade(grade);
 
-                                System.out.println("Grade added successfully.\n");
+                                    System.out.println("Grade added successfully.\n");
+                                } else {
+                                    Grade.gradeCounter--;
+
+                                    System.out.println("Grade record cancelled\n");
+                                }
                             } else {
                                 Grade.gradeCounter--;
-
-                                System.out.println("Grade record cancelled\n");
+                                System.out.println("Invalid input.");
                             }
                         } else {
-                            Grade.gradeCounter--;
-                            System.out.println("Invalid input.");
+                            System.out.println("Invalid grade entered");
+                            break;
                         }
-                    } else {
-                        System.out.println("Invalid grade entered");
-                        break;
+                    } catch (StudentNotFoundException e) {
+                        System.out.println(e.getMessage());
+                        System.out.println();
                     }
 
                     break;
@@ -285,68 +295,74 @@ public class Main {
                     System.out.println();
 
                     // Get student using ID and display student details
-                    Student studentForReport = studentManager.findStudent(studentId);
 
-                    //If there is a student associated with the ID, continue, else
-                    // display an error message
-                    if (studentForReport != null) {
-                        // Checking if student has grades recorded
-                        boolean hasGrades = false;
-                        for (Grade studentGrade : gradeManager.getGrades()) {
-                            // Using the condition, studentGrade != null, so it doesn't throw an error when
-                            // the student has no grades recorded for the display of student
-                            // details
-                            if (studentGrade != null && studentGrade.getStudentId().equals(studentId)) {
-                                hasGrades = true;
-                                break;
+                    try {
+                        student = studentManager.findStudent(studentId);
+
+                        //If there is a student associated with the ID, continue, else
+                        // display an error message
+                        if (student != null) {
+                            // Checking if student has grades recorded
+                            boolean hasGrades = false;
+                            for (Grade studentGrade : gradeManager.getGrades()) {
+                                // Using the condition, studentGrade != null, so it doesn't throw an error when
+                                // the student has no grades recorded for the display of student
+                                // details
+                                if (studentGrade != null && studentGrade.getStudentId().equals(studentId)) {
+                                    hasGrades = true;
+                                    break;
+                                }
                             }
-                        }
 
-                        // Printing out different student details for when student has grades recorded and
-                        // when the student does not
-                        System.out.printf("Student: %s - %s\n", studentForReport.getStudentId(), studentForReport.getName());
-                        System.out.printf("Type: %s Student\n", studentForReport.getStudentType());
+                            // Printing out different student details for when student has grades recorded and
+                            // when the student does not
+                            System.out.printf("Student: %s - %s\n", student.getStudentId(), student.getName());
+                            System.out.printf("Type: %s Student\n", student.getStudentType());
 
-                        if (hasGrades) {
-                            System.out.printf("Current Average: %.1f%%\n", gradeManager.calculateOverallAverage(studentId));
+                            if (hasGrades) {
+                                System.out.printf("Current Average: %.1f%%\n", gradeManager.calculateOverallAverage(studentId));
 
-                            // Check if student is passing (average grade is greater than passing grade)
-                             boolean isPassing = studentForReport.isPassing(gradeManager.calculateOverallAverage(studentId));
+                                // Check if student is passing (average grade is greater than passing grade)
+                                boolean isPassing = student.isPassing(gradeManager.calculateOverallAverage(studentId));
 
-                             if (isPassing) {
-                                 System.out.print("Status: PASSING\n");
-                             } else {
-                                 System.out.print("Status: FAILING\n");
-                             }
+                                if (isPassing) {
+                                    System.out.print("Status: PASSING\n");
+                                } else {
+                                    System.out.print("Status: FAILING\n");
+                                }
 
-                            System.out.println();
-
-                            //gradeManager.viewGradesByStudent(studentId);
-                            System.out.println(gradeManager.viewGradesByStudent(studentId));
-
-                            // Displaying the student's performance summary
-                            System.out.println("Performance Summary:");
-                            if (isPassing) {
-                                System.out.println("Passing all core subjects");
-                                System.out.printf("Meeting passing grade requirement (%.0f%%)\n", studentForReport.getPassingGrade());
                                 System.out.println();
+
+                                //gradeManager.viewGradesByStudent(studentId);
+                                System.out.println(gradeManager.viewGradesByStudent(studentId));
+
+                                // Displaying the student's performance summary
+                                System.out.println("Performance Summary:");
+                                if (isPassing) {
+                                    System.out.println("Passing all core subjects");
+                                    System.out.printf("Meeting passing grade requirement (%.0f%%)\n", student.getPassingGrade());
+                                    System.out.println();
+                                } else {
+                                    System.out.println("Failing some subjects");
+                                    System.out.printf("Failing to meet passing grade requirement (%.0f%%)\n", student.getPassingGrade());
+                                    System.out.println();
+                                }
                             } else {
-                                System.out.println("Failing some subjects");
-                                System.out.printf("Failing to meet passing grade requirement (%.0f%%)\n", studentForReport.getPassingGrade());
-                                System.out.println();
+                                // For when student has no grades recorded
+                                System.out.printf("Passing Grade: %.0f%%\n", student.getPassingGrade());
+
+                                //gradeManager.viewGradesByStudent(studentId);
+                                System.out.println(gradeManager.viewGradesByStudent(studentId));
                             }
+
                         } else {
-                            // For when student has no grades recorded
-                            System.out.printf("Passing Grade: %.0f%%\n", studentForReport.getPassingGrade());
-
-                            //gradeManager.viewGradesByStudent(studentId);
-                            System.out.println(gradeManager.viewGradesByStudent(studentId));
+                            System.out.println("Invalid Student ID. Student with this ID does not exist");
+                            System.out.println();
+                            break;
                         }
-
-                    } else {
-                        System.out.println("Invalid Student ID. Student with this ID does not exist");
+                    } catch (StudentNotFoundException e) {
+                        System.out.println(e.getMessage());
                         System.out.println();
-                        break;
                     }
 
                     break;
@@ -359,112 +375,117 @@ public class Main {
                     studentId = scanner.nextLine();
                     System.out.println();
 
-                    student = studentManager.findStudent(studentId);
+                    try {
+                        student = studentManager.findStudent(studentId);
 
-                    // student not found exception
-                    if (student == null) {
-                        System.out.println("Invalid ID. Student with this ID does not exist");
-                        System.out.println();
-                        break;
-                    }
-
-                    System.out.printf("Student: %s - %s\n", student.getStudentId(), student.getName());
-                    System.out.printf("Type: %s Student\n", student.getStudentType());
-                    // Grades are added for subjects so this works for the number of grades
-                    System.out.printf("Total Grades: %d\n", student.getEnrolledSubjectsCount());
-                    System.out.println();
-
-                    System.out.println("Export options:");
-                    System.out.println("1. Summary Report (overview only)");
-                    System.out.println("2. Detailed Report (all grades)");
-                    System.out.println("3. Both");
-                    System.out.println();
-
-                    System.out.print("Select option (1-3): ");
-                    int exportOption = scanner.nextInt();
-                    scanner.nextLine();
-
-                    if (exportOption >= 1 && exportOption <= 3) {
-                        System.out.print("Enter filename (without extension): ");
-                        String fileName = scanner.nextLine();
-                        System.out.println();
-
-                        try{
-                            FileExporter exporter = new FileExporter(fileName);
-                            StringBuilder content= new StringBuilder();
-
-                            content.append("==================================================\n");
-                            content.append("                   GRADE REPORT                   \n");
-                            content.append("==================================================\n\n");
-
-                            // Added option 3 for when user wants BOTH
-                            if (exportOption == 1 || exportOption == 3) {
-                                // SUMMARY REPORT
-                                content.append("                SUMMARY REPORT                \n\n");
-                                content.append(String.format("Student ID: %s\n", student.getStudentId()));
-                                content.append(String.format("Name: %s\n", student.getName()));
-                                content.append(String.format("Type: %s\n", student.getStudentType()));
-                                content.append(String.format("Total Subjects: %d\n", student.getEnrolledSubjectsCount()));
-
-                                // Adding student summary
-                                double average = student.calculateAverageGrade();
-                                content.append(String.format("Overall Average: %.2f\n", average));
-
-                                // Performance analysis
-                                content.append("\nPerformance Analysis:\n");
-                                if (average >= 85) {
-                                    content.append("- Excellent performance\n");
-                                } else if (average >= 70) {
-                                    content.append("- Good performance\n");
-                                } else if (average >= 50) {
-                                    content.append("- Satisfactory performance\n");
-                                } else {
-                                    content.append("- Needs improvement\n");
-                                }
-                                content.append("\n");
-                            }
-
-                            if (exportOption == 2 || exportOption == 3) {
-                                if (exportOption == 3) {
-                                    content.append("==================================================\n");
-                                }
-
-                                content.append("                DETAILED REPORT                \n\n");
-                                content.append(String.format("Student ID: %s\n", student.getStudentId()));
-                                content.append(String.format("Name: %s\n", student.getName()));
-                                content.append(String.format("Type: %s\n", student.getStudentType()));
-
-                                content.append("All Grades:\n");
-                                content.append("==================================================\n");
-                                content.append(gradeManager.viewGradesByStudent(studentId));
-
-                                content.append("\n");
-                                double average = student.calculateAverageGrade();
-                                content.append(String.format("Overall Average: %.2f\n", average));
-
-                            }
-
-                            content.append("==================================================\n");
-                            content.append("                  End of Report                 \n\n");
-                            content.append("==================================================\n");
-
-                            exporter.exportGradeToTXT(content.toString());
-
-                            System.out.println("Report exported successfully!");
-                            System.out.printf("File: %s.txt\n", fileName);
-                            System.out.println("Location: ./reports/");
-                            System.out.println("Size: 2.4 KB"); // change to the size of the file
-                            System.out.printf("Contains: %d grades, averages, performance summary\n", student.getEnrolledSubjectsCount()); // change to what it actually contains
+                        // student not found exception
+                        if (student == null) {
+                            System.out.println("Invalid ID. Student with this ID does not exist");
                             System.out.println();
-
-                        } catch (IOException e) {
-                            // Change to custom exception
-                            System.out.println("Error generating report: " + e.getMessage());
-                            System.out.println();
+                            break;
                         }
-                    } else {
-                        // Add a menu option exception here
-                        System.out.println("Invalid input.");
+
+                        System.out.printf("Student: %s - %s\n", student.getStudentId(), student.getName());
+                        System.out.printf("Type: %s Student\n", student.getStudentType());
+                        // Grades are added for subjects so this works for the number of grades
+                        System.out.printf("Total Grades: %d\n", student.getEnrolledSubjectsCount());
+                        System.out.println();
+
+                        System.out.println("Export options:");
+                        System.out.println("1. Summary Report (overview only)");
+                        System.out.println("2. Detailed Report (all grades)");
+                        System.out.println("3. Both");
+                        System.out.println();
+
+                        System.out.print("Select option (1-3): ");
+                        int exportOption = scanner.nextInt();
+                        scanner.nextLine();
+
+                        if (exportOption >= 1 && exportOption <= 3) {
+                            System.out.print("Enter filename (without extension): ");
+                            String fileName = scanner.nextLine();
+                            System.out.println();
+
+                            try{
+                                FileExporter exporter = new FileExporter(fileName);
+                                StringBuilder content= new StringBuilder();
+
+                                content.append("==================================================\n");
+                                content.append("                   GRADE REPORT                   \n");
+                                content.append("==================================================\n\n");
+
+                                // Added option 3 for when user wants BOTH
+                                if (exportOption == 1 || exportOption == 3) {
+                                    // SUMMARY REPORT
+                                    content.append("                SUMMARY REPORT                \n\n");
+                                    content.append(String.format("Student ID: %s\n", student.getStudentId()));
+                                    content.append(String.format("Name: %s\n", student.getName()));
+                                    content.append(String.format("Type: %s\n", student.getStudentType()));
+                                    content.append(String.format("Total Subjects: %d\n", student.getEnrolledSubjectsCount()));
+
+                                    // Adding student summary
+                                    double average = student.calculateAverageGrade();
+                                    content.append(String.format("Overall Average: %.2f\n", average));
+
+                                    // Performance analysis
+                                    content.append("\nPerformance Analysis:\n");
+                                    if (average >= 85) {
+                                        content.append("- Excellent performance\n");
+                                    } else if (average >= 70) {
+                                        content.append("- Good performance\n");
+                                    } else if (average >= 50) {
+                                        content.append("- Satisfactory performance\n");
+                                    } else {
+                                        content.append("- Needs improvement\n");
+                                    }
+                                    content.append("\n");
+                                }
+
+                                if (exportOption == 2 || exportOption == 3) {
+                                    if (exportOption == 3) {
+                                        content.append("==================================================\n");
+                                    }
+
+                                    content.append("                DETAILED REPORT                \n\n");
+                                    content.append(String.format("Student ID: %s\n", student.getStudentId()));
+                                    content.append(String.format("Name: %s\n", student.getName()));
+                                    content.append(String.format("Type: %s\n", student.getStudentType()));
+
+                                    content.append("All Grades:\n");
+                                    content.append("==================================================\n");
+                                    content.append(gradeManager.viewGradesByStudent(studentId));
+
+                                    content.append("\n");
+                                    double average = student.calculateAverageGrade();
+                                    content.append(String.format("Overall Average: %.2f\n", average));
+
+                                }
+
+                                content.append("==================================================\n");
+                                content.append("                  End of Report                 \n\n");
+                                content.append("==================================================\n");
+
+                                exporter.exportGradeToTXT(content.toString());
+
+                                System.out.println("Report exported successfully!");
+                                System.out.printf("File: %s.txt\n", fileName);
+                                System.out.println("Location: ./reports/");
+                                System.out.println("Size: 2.4 KB"); // change to the size of the file
+                                System.out.printf("Contains: %d grades, averages, performance summary\n", student.getEnrolledSubjectsCount()); // change to what it actually contains
+                                System.out.println();
+
+                            } catch (IOException e) {
+                                // Change to custom exception
+                                System.out.println("Error generating report: " + e.getMessage());
+                                System.out.println();
+                            }
+                        } else {
+                            // Add a menu option exception here
+                            System.out.println("Invalid input.");
+                        }
+                    } catch (StudentNotFoundException e) {
+                        System.out.println(e.getMessage());
+                        System.out.println();
                     }
 
                     break;
@@ -477,25 +498,30 @@ public class Main {
                     studentId = scanner.nextLine();
                     System.out.println();
 
-                    student = studentManager.findStudent(studentId);
+                    try {
+                        student = studentManager.findStudent(studentId);
 
-                    if (student == null) {
-                        System.out.println("Invalid ID. Student with this ID does not exist");
+                        if (student == null) {
+                            System.out.println("Invalid ID. Student with this ID does not exist");
+                            System.out.println();
+                            break;
+                        }
+
+                        // Check if student has any grades
+                        if (student.getEnrolledSubjectsCount() == 0) {
+                            System.out.println("No grades recorded for this student yet.");
+                            System.out.println();
+                            break;
+                        }
+
+                        // Create GPA calculator and generate report
+                        GPACalculator gpaCalculator = new GPACalculator(gradeManager);
+                        String gpaReport = gpaCalculator.generateGPAReport(studentId, student, studentManager);
+                        System.out.println(gpaReport);
+                    } catch (StudentNotFoundException e) {
+                        System.out.println(e.getMessage());
                         System.out.println();
-                        break;
                     }
-
-                    // Check if student has any grades
-                    if (student.getEnrolledSubjectsCount() == 0) {
-                        System.out.println("No grades recorded for this student yet.");
-                        System.out.println();
-                        break;
-                    }
-
-                    // Create GPA calculator and generate report
-                    GPACalculator gpaCalculator = new GPACalculator(gradeManager);
-                    String gpaReport = gpaCalculator.generateGPAReport(studentId, student, studentManager);
-                    System.out.println(gpaReport);
 
                     break;
                 case 7:
@@ -639,8 +665,8 @@ public class Main {
 
                             // Create import log file
                             try {
-                                String timestamp = java.time.LocalDateTime.now().format(
-                                        java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
+                                String timestamp = LocalDateTime.now().format(
+                                        DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
                                 );
                                 String logFileName = "import_log_" + timestamp;
                                 FileExporter logExporter = new FileExporter(logFileName);
@@ -649,7 +675,7 @@ public class Main {
                                 logContent.append("BULK IMPORT LOG\n");
                                 logContent.append("_______________________________________________\n\n");
                                 logContent.append(String.format("Source File: %s.csv\n", fileName));
-                                logContent.append(String.format("Import Date: %s\n", java.time.LocalDate.now()));
+                                logContent.append(String.format("Import Date: %s\n", LocalDate.now()));
                                 logContent.append(String.format("Total Rows: %d\n", gradeData.size()));
                                 logContent.append(String.format("Successfully Imported: %d\n", successCount));
                                 logContent.append(String.format("Failed: %d\n\n", failCount));
@@ -715,158 +741,163 @@ public class Main {
                     scanner.nextLine();
                     System.out.println();
 
-                    if (searchOption >= 1 && searchOption <= 4) {
-                        if (searchOption == 1) { // Exact match by student ID
-                            System.out.print("Enter Student ID: ");
-                            studentId = scanner.nextLine();
+                    try {
+                        if (searchOption >= 1 && searchOption <= 4) {
+                            if (searchOption == 1) { // Exact match by student ID
+                                System.out.print("Enter Student ID: ");
+                                studentId = scanner.nextLine();
 
-                            student = studentManager.findStudent(studentId);
+                                student = studentManager.findStudent(studentId);
 
-                            if (student != null) {// If a student is found
-                                // Display student details. Add more details here if need be
-                                System.out.printf("Student ID: %s\n", student.getStudentId());
-                                System.out.printf("Name: %s\n", student.getName());
-                                System.out.printf("Type: %s\n", student.getStudentType());
-                                System.out.printf("Age: %d\n", student.getAge());
-                                System.out.printf("Email: %s\n", student.getEmail());
-                                System.out.printf("Passing Grade: %d%%\n", (int) student.getPassingGrade());
-                                System.out.printf("Average: %.2f\n", student.calculateAverageGrade());
-                                System.out.println();
-                            } else {// Return a custom student not found exception here
-                                System.out.println("Student with this ID does not exist");
-                                System.out.println();
-                            }
-                        } else if (searchOption == 2) {// Search by name (partial match)
-                            System.out.print("Enter name (partial or full): ");
-                            String searchName = scanner.nextLine();
-
-                            Student[] students = studentManager.getStudents();
-
-                            if (students.length > 0) {
-                                System.out.println("----------------------------------------------------------------------------|");
-                                System.out.println("STU ID   | NAME                    | TYPE               | AVG GRADE         |");
-                                System.out.println("----------------------------------------------------------------------------|");
-
-                                int match = 0;
-
-                                for (Student s : students) {
-                                    if (s == null) continue;
-
-                                    if (s.getName().contains(searchName)) {
-                                        System.out.printf("%-8s | %-23s | %-18s | %-17.1f%%\n",
-                                                s.getStudentId(), s.getName(), s.getStudentType(), s.calculateAverageGrade());
-                                        match++;
-                                    }
-                                }
-                                System.out.println();
-
-                                // if no student matches the search
-                                if (match == 0) {// throw a custom exception here
-                                    System.out.println("No student matches the name you entered");
+                                if (student != null) {// If a student is found
+                                    // Display student details. Add more details here if need be
+                                    System.out.printf("Student ID: %s\n", student.getStudentId());
+                                    System.out.printf("Name: %s\n", student.getName());
+                                    System.out.printf("Type: %s\n", student.getStudentType());
+                                    System.out.printf("Age: %d\n", student.getAge());
+                                    System.out.printf("Email: %s\n", student.getEmail());
+                                    System.out.printf("Passing Grade: %d%%\n", (int) student.getPassingGrade());
+                                    System.out.printf("Average: %.2f\n", student.calculateAverageGrade());
                                     System.out.println();
+                                } else {// Return a custom student not found exception here
+                                    System.out.println("Student with this ID does not exist");
+                                    System.out.println();
+                                }
+                            } else if (searchOption == 2) {// Search by name (partial match)
+                                System.out.print("Enter name (partial or full): ");
+                                String searchName = scanner.nextLine();
+
+                                Student[] students = studentManager.getStudents();
+
+                                if (students.length > 0) {
+                                    System.out.println("----------------------------------------------------------------------------|");
+                                    System.out.println("STU ID   | NAME                    | TYPE               | AVG GRADE         |");
+                                    System.out.println("----------------------------------------------------------------------------|");
+
+                                    int match = 0;
+
+                                    for (Student s : students) {
+                                        if (s == null) continue;
+
+                                        if (s.getName().contains(searchName)) {
+                                            System.out.printf("%-8s | %-23s | %-18s | %-17.1f%%\n",
+                                                    s.getStudentId(), s.getName(), s.getStudentType(), s.calculateAverageGrade());
+                                            match++;
+                                        }
+                                    }
+                                    System.out.println();
+
+                                    // if no student matches the search
+                                    if (match == 0) {// throw a custom exception here
+                                        System.out.println("No student matches the name you entered");
+                                        System.out.println();
+                                    } else {
+                                        // add action choice code
+                                    }
+                                } else {// add a custom exception here for no students being added
+                                    System.out.println("No students have been added");
+                                }
+                            } else if (searchOption == 3) {// Search by grade range
+                                System.out.print("Enter the maximum grade range: ");
+                                int maxGrade = scanner.nextInt();
+                                scanner.nextLine();
+                                System.out.println();
+
+                                System.out.print("Enter the minimum grade range: ");
+                                int minGrade = scanner.nextInt();
+                                scanner.nextLine();
+                                System.out.println();
+
+                                Student[] students = studentManager.getStudents();
+
+                                if (students.length > 0) {
+                                    System.out.println("----------------------------------------------------------------------------|");
+                                    System.out.println("STU ID   | NAME                    | TYPE               | AVG GRADE         |");
+                                    System.out.println("----------------------------------------------------------------------------|");
+
+                                    int match = 0;
+
+                                    for (Student s : students) {
+                                        if (s == null) continue;
+
+                                        double avg = s.calculateAverageGrade();
+                                        if (avg >= minGrade && avg <= maxGrade) {
+                                            System.out.printf("%-8s | %-23s | %-18s | %-17.1f%%\n",
+                                                    s.getStudentId(), s.getName(), s.getStudentType(), avg);
+                                            match++;
+                                        }
+                                    }
+                                    System.out.println("----------------------------------------------------------------------------|");
+                                    System.out.println("SEARCH RESULTS (" + match + " found with grades between " + minGrade + "% and " + maxGrade + "%)");
+                                    System.out.println();
+
+                                    if (match == 0) {
+                                        System.out.println("No students found in the specified grade range");
+                                        System.out.println();
+                                    }
                                 } else {
-                                    // add action choice code
-                                }
-                            } else {// add a custom exception here for no students being added
-                                System.out.println("No students have been added");
-                            }
-                        } else if (searchOption == 3) {// Search by grade range
-                            System.out.print("Enter the maximum grade range: ");
-                            int maxGrade = scanner.nextInt();
-                            scanner.nextLine();
-                            System.out.println();
-
-                            System.out.print("Enter the minimum grade range: ");
-                            int minGrade = scanner.nextInt();
-                            scanner.nextLine();
-                            System.out.println();
-
-                            Student[] students = studentManager.getStudents();
-
-                            if (students.length > 0) {
-                                System.out.println("----------------------------------------------------------------------------|");
-                                System.out.println("STU ID   | NAME                    | TYPE               | AVG GRADE         |");
-                                System.out.println("----------------------------------------------------------------------------|");
-
-                                int match = 0;
-
-                                for (Student s : students) {
-                                    if (s == null) continue;
-
-                                    double avg = s.calculateAverageGrade();
-                                    if (avg >= minGrade && avg <= maxGrade) {
-                                        System.out.printf("%-8s | %-23s | %-18s | %-17.1f%%\n",
-                                                s.getStudentId(), s.getName(), s.getStudentType(), avg);
-                                        match++;
-                                    }
-                                }
-                                System.out.println("----------------------------------------------------------------------------|");
-                                System.out.println("SEARCH RESULTS (" + match + " found with grades between " + minGrade + "% and " + maxGrade + "%)");
-                                System.out.println();
-
-                                if (match == 0) {
-                                    System.out.println("No students found in the specified grade range");
+                                    System.out.println("No students have been added");
                                     System.out.println();
                                 }
+
                             } else {
-                                System.out.println("No students have been added");
+                                System.out.println("Select Student Type:");
+                                System.out.println("1. Regular");
+                                System.out.println("2. Honors");
+
+                                System.out.print("Enter choice (1-2): ");
+                                int typeChoice = scanner.nextInt();
+                                scanner.nextLine();
                                 System.out.println();
-                            }
 
-                        } else {
-                            System.out.println("Select Student Type:");
-                            System.out.println("1. Regular");
-                            System.out.println("2. Honors");
+                                String searchType;
 
-                            System.out.print("Enter choice (1-2): ");
-                            int typeChoice = scanner.nextInt();
-                            scanner.nextLine();
-                            System.out.println();
-
-                            String searchType;
-
-                            if (typeChoice == 1) {
-                                searchType = "Regular";
-                            } else if (typeChoice == 2) {
-                                searchType = "Honors";
-                            } else {
-                                System.out.println("Invalid choice entered");
-                                break;
-                            }
-
-                            Student[] students = studentManager.getStudents();
-
-                            if (students.length > 0) {
-                                System.out.println("----------------------------------------------------------------------------|");
-                                System.out.println("STU ID   | NAME                    | TYPE               | AVG GRADE         |");
-                                System.out.println("----------------------------------------------------------------------------|");
-
-                                int match = 0;
-
-                                for (Student s : students) {
-                                    if (s == null) continue;
-
-                                    if (s.getStudentType().equalsIgnoreCase(searchType)) {
-                                        System.out.printf("%-8s | %-23s | %-18s | %-17.1f%%\n",
-                                                s.getStudentId(), s.getName(), s.getStudentType(), s.calculateAverageGrade());
-                                        match++;
-                                    }
+                                if (typeChoice == 1) {
+                                    searchType = "Regular";
+                                } else if (typeChoice == 2) {
+                                    searchType = "Honors";
+                                } else {
+                                    System.out.println("Invalid choice entered");
+                                    break;
                                 }
-                                System.out.println("----------------------------------------------------------------------------|");
-                                System.out.println("SEARCH RESULTS (" + match + " " + searchType + " students found)");
-                                System.out.println();
 
-                                if (match == 0) {
-                                    System.out.println("No " + searchType + " students found");
+                                Student[] students = studentManager.getStudents();
+
+                                if (students.length > 0) {
+                                    System.out.println("----------------------------------------------------------------------------|");
+                                    System.out.println("STU ID   | NAME                    | TYPE               | AVG GRADE         |");
+                                    System.out.println("----------------------------------------------------------------------------|");
+
+                                    int match = 0;
+
+                                    for (Student s : students) {
+                                        if (s == null) continue;
+
+                                        if (s.getStudentType().equalsIgnoreCase(searchType)) {
+                                            System.out.printf("%-8s | %-23s | %-18s | %-17.1f%%\n",
+                                                    s.getStudentId(), s.getName(), s.getStudentType(), s.calculateAverageGrade());
+                                            match++;
+                                        }
+                                    }
+                                    System.out.println("----------------------------------------------------------------------------|");
+                                    System.out.println("SEARCH RESULTS (" + match + " " + searchType + " students found)");
+                                    System.out.println();
+
+                                    if (match == 0) {
+                                        System.out.println("No " + searchType + " students found");
+                                        System.out.println();
+                                    }
+                                } else {
+                                    System.out.println("No students have been added");
                                     System.out.println();
                                 }
-                            } else {
-                                System.out.println("No students have been added");
-                                System.out.println();
                             }
+                        } else {// Throw a custom input menu choice exception here
+                            System.out.println("Invalid search option entered. Try again.");
                         }
-                    } else {// Throw a custom input menu choice exception here
-                        System.out.println("Invalid search option entered. Try again.");
+                    } catch (StudentNotFoundException e) {
+                        System.out.println(e.getMessage());
+                        System.out.println();
                     }
                     break;
                 case 10:
