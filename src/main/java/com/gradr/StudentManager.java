@@ -1,5 +1,7 @@
 package com.gradr;
 
+import com.gradr.exceptions.StudentNotFoundException;
+
 class StudentManager {
     private Student[] students = new Student[50];
     private int studentCount = 0;
@@ -10,7 +12,7 @@ class StudentManager {
         studentCount++;
     }
 
-    public Student findStudent(String studentId) {
+    public Student findStudent(String studentId) throws StudentNotFoundException {
         for (Student student : students) {
             // To prevent error when wrong ID is provided
             if (student == null) return null;
@@ -19,7 +21,7 @@ class StudentManager {
                 return student;
             }
         }
-        return null;
+        throw new StudentNotFoundException("Student with ID '" + studentId + "' not found");
     }
 
     // Returns are students

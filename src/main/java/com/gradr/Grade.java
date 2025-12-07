@@ -18,11 +18,6 @@ public class Grade implements Gradable {
         setDate();
     }
 
-    // for testing
-    public Grade() {
-
-    }
-
     public void setGradeId() {
         gradeId = String.format("GRD%03d", ++gradeCounter);
     }

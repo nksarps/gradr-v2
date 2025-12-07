@@ -1,5 +1,7 @@
 package com.gradr;
 
+import com.gradr.exceptions.StudentNotFoundException;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Scanner;
@@ -154,7 +156,13 @@ public class Main {
                     studentId = scanner.nextLine();
                     System.out.println();
 
-                    student = studentManager.findStudent(studentId);
+                    try {
+                        student = studentManager.findStudent(studentId);
+                    } catch (StudentNotFoundException e) {
+                        System.out.println(e.getMessage());
+                        System.out.println();
+                        break;
+                    }
 
                     if (student == null) {
                         System.out.println("Invalid ID. Student with this ID does not exist");
