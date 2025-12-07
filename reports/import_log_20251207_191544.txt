@@ -1,0 +1,30 @@
+BULK IMPORT LOG
+_______________________________________________
+
+Source File: term_one_grades.csv
+Import Date: 2025-12-07
+Total Rows: 25
+Successfully Imported: 5
+Failed: 20
+
+Failed Records:
+Row 6: Invalid student ID (STU002)
+Row 7: Invalid student ID (STU002)
+Row 8: Invalid student ID (STU002)
+Row 9: Invalid student ID (STU002)
+Row 10: Invalid student ID (STU003)
+Row 11: Invalid student ID (STU003)
+Row 12: Invalid student ID (STU003)
+Row 13: Invalid student ID (STU003)
+Row 14: Invalid student ID (STU004)
+Row 15: Invalid student ID (STU004)
+Row 16: Invalid student ID (STU004)
+Row 17: Invalid student ID (STU004)
+Row 18: Invalid student ID (STU005)
+Row 19: Invalid student ID (STU005)
+Row 20: Invalid student ID (STU005)
+Row 21: Invalid student ID (STU005)
+Row 23: Invalid student ID (STU002)
+Row 24: Invalid student ID (STU003)
+Row 25: Invalid student ID (STU004)
+Row 26: Invalid student ID (STU005)

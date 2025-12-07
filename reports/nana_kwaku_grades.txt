@@ -1,0 +1,41 @@
+==================================================
+                   GRADE REPORT                   
+==================================================
+
+                SUMMARY REPORT                
+
+Student ID: STU001
+Name: Nana
+Type: Honors
+Total Subjects: 3
+Overall Average: 85.67
+
+Performance Analysis:
+- Excellent performance
+
+==================================================
+                DETAILED REPORT                
+
+Student ID: STU001
+Name: Nana
+Type: Honors
+All Grades:
+==================================================
+GRADE HISTORY
+-------------------------------------------------------------------------------------
+GRD ID   | DATE       | SUBJECT          | TYPE       | GRADE
+-------------------------------------------------------------------------------------
+GRD001    | 2025-12-05 | Mathematics      | Core       | 89.0 %
+GRD002    | 2025-12-05 | English          | Core       | 90.0 %
+GRD003    | 2025-12-05 | Science          | Core       | 78.0 %
+
+Total Grades: 3
+Core Subjects Average: 85.7%
+Elective Subjects Average: 0.0%
+Overall Average: 85.7%
+
+Overall Average: 85.67
+==================================================
+                  End of Report                 
+
+==================================================
