@@ -1,9 +1,6 @@
 package com.gradr;
 
-import com.gradr.exceptions.FileExportException;
-import com.gradr.exceptions.InvalidGradeException;
-import com.gradr.exceptions.InvalidMenuChoiceException;
-import com.gradr.exceptions.StudentNotFoundException;
+import com.gradr.exceptions.*;
 
 import java.io.IOException;
 import java.time.LocalDate;
@@ -14,7 +11,7 @@ import java.util.InputMismatchException;
 import java.util.Scanner;
 
 public class Main {
-    public static void main(String[] args) throws StudentNotFoundException {
+    public static void main(String[] args) throws StudentNotFoundException, CSVParseException {
         Scanner scanner = new Scanner(System.in);
 
         StudentManager studentManager = new StudentManager();
@@ -712,42 +709,38 @@ public class Main {
                             System.out.printf("  %d grades added to system\n", successCount);
 
                             // Create import log file
-                            try {
-                                String timestamp = LocalDateTime.now().format(
-                                        DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
-                                );
-                                String logFileName = "import_log_" + timestamp;
-                                FileExporter logExporter = new FileExporter(logFileName);
+                            String timestamp = LocalDateTime.now().format(
+                                    DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
+                            );
+                            String logFileName = "import_log_" + timestamp;
+                            FileExporter logExporter = new FileExporter(logFileName);
 
-                                StringBuilder logContent = new StringBuilder();
-                                logContent.append("BULK IMPORT LOG\n");
-                                logContent.append("_______________________________________________\n\n");
-                                logContent.append(String.format("Source File: %s.csv\n", fileName));
-                                logContent.append(String.format("Import Date: %s\n", LocalDate.now()));
-                                logContent.append(String.format("Total Rows: %d\n", gradeData.size()));
-                                logContent.append(String.format("Successfully Imported: %d\n", successCount));
-                                logContent.append(String.format("Failed: %d\n\n", failCount));
+                            StringBuilder logContent = new StringBuilder();
+                            logContent.append("BULK IMPORT LOG\n");
+                            logContent.append("_______________________________________________\n\n");
+                            logContent.append(String.format("Source File: %s.csv\n", fileName));
+                            logContent.append(String.format("Import Date: %s\n", LocalDate.now()));
+                            logContent.append(String.format("Total Rows: %d\n", gradeData.size()));
+                            logContent.append(String.format("Successfully Imported: %d\n", successCount));
+                            logContent.append(String.format("Failed: %d\n\n", failCount));
 
-                                if (failCount > 0) {
-                                    logContent.append("Failed Records:\n");
-                                    for (String failedRecord : failedRecords) {
-                                        logContent.append(failedRecord + "\n");
-                                    }
+                            if (failCount > 0) {
+                                logContent.append("Failed Records:\n");
+                                for (String failedRecord : failedRecords) {
+                                    logContent.append(failedRecord + "\n");
                                 }
-
-                                logExporter.exportGradeToTXT(logContent.toString());
-                                System.out.printf("  See import_log_%s.txt for details\n", timestamp);
-                            } catch (IOException e) {
-                                // Log file creation failed, but import was successful
                             }
+
+                            logExporter.exportGradeToTXT(logContent.toString());
+                            System.out.printf("  See import_log_%s.txt for details\n", timestamp);
                         }
 
                         System.out.println();
 
                     } catch (IOException e) {
-                        System.out.println("Error reading CSV file: " + e.getMessage());
-                        System.out.println("Please check the file exists in ./imports/ directory.");
-                        System.out.println();
+                        throw new CSVParseException(
+                                "X ERROR: CSVParseException\\n Please check the file exists in ./imports/ directory."
+                        );
                     } catch (Exception e) {
                         System.out.println("Error processing CSV file: " + e.getMessage());
                         System.out.println();

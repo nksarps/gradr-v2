@@ -1,5 +1,7 @@
 package com.gradr;
 
+import com.gradr.exceptions.CSVParseException;
+
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
@@ -22,7 +24,7 @@ public class CSVParser {
      * @return ArrayList of String arrays containing grade data
      * @throws IOException if file cannot be read
      */
-    public ArrayList<String[]> parseGradeCSV() throws IOException {
+    public ArrayList<String[]> parseGradeCSV() throws IOException, CSVParseException {
         ArrayList<String[]> gradeData = new ArrayList<>();
         BufferedReader reader = null;
 
@@ -56,6 +58,8 @@ public class CSVParser {
                     gradeData.add(data);
                 }
             }
+        } catch (IOException e) {
+            throw new CSVParseException("Failed to read new CSV file: " + filePath);
         } finally {
             if (reader != null) {
                 reader.close();
