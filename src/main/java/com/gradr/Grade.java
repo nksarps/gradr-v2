@@ -1,5 +1,7 @@
 package com.gradr;
 
+import com.gradr.exceptions.InvalidGradeException;
+
 import java.time.LocalDate;
 
 public class Grade implements Gradable {
@@ -16,11 +18,6 @@ public class Grade implements Gradable {
         setSubject(subject);
         setGrade(grade);
         setDate();
-    }
-
-    // for testing
-    public Grade() {
-
     }
 
     public void setGradeId() {
@@ -70,12 +67,17 @@ public class Grade implements Gradable {
     }
 
     @Override
-    public boolean validateGrade(double grade) {
-        return grade >= 0 && grade <= 100;
+    public boolean validateGrade(double grade) throws InvalidGradeException {
+        if (grade < 0 || grade > 100) {
+            throw new InvalidGradeException(
+                    "X ERROR: InvalidGradeException\n  Grade must be between 0 and 100"
+            );
+        }
+        return true;
     }
 
     @Override
-    public boolean recordGrade(double grade) {
+    public boolean recordGrade(double grade) throws InvalidGradeException {
         return validateGrade(grade);
     }
 }

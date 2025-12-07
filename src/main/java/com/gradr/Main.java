@@ -1,5 +1,6 @@
 package com.gradr;
 
+import com.gradr.exceptions.InvalidGradeException;
 import com.gradr.exceptions.StudentNotFoundException;
 
 import java.io.IOException;
@@ -279,7 +280,7 @@ public class Main {
                             System.out.println("Invalid grade entered");
                             break;
                         }
-                    } catch (StudentNotFoundException e) {
+                    } catch (StudentNotFoundException | InvalidGradeException e) {
                         System.out.println(e.getMessage());
                         System.out.println();
                     }
