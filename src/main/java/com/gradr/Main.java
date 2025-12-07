@@ -1,5 +1,6 @@
 package com.gradr;
 
+import com.gradr.exceptions.FileExportException;
 import com.gradr.exceptions.InvalidGradeException;
 import com.gradr.exceptions.InvalidMenuChoiceException;
 import com.gradr.exceptions.StudentNotFoundException;
@@ -519,17 +520,18 @@ public class Main {
                                 System.out.printf("Contains: %d grades, averages, performance summary\n", student.getEnrolledSubjectsCount()); // change to what it actually contains
                                 System.out.println();
 
-                            } catch (IOException e) {
-                                // Change to custom exception
-                                System.out.println("Error generating report: " + e.getMessage());
-                                System.out.println();
+                            } catch (FileExportException e) {
+                                throw new FileExportException(
+                                        "X ERROR: FileExportException\n   Failed to export file"
+
+                                );
                             }
                         } else {
                             throw new InvalidMenuChoiceException(
                                     "X ERROR: InvalidMenuChoiceException\n   Please select a valid option (1-3).\n   You entered: " + exportOption
                             );
                         }
-                    } catch (StudentNotFoundException | InvalidMenuChoiceException e) {
+                    } catch (StudentNotFoundException | InvalidMenuChoiceException | FileExportException e) {
                         System.out.println(e.getMessage());
                         System.out.println();
                     }
