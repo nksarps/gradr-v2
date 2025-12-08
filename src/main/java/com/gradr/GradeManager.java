@@ -9,53 +9,49 @@ class GradeManager {
         gradeCount++;
     }
 
-    public void viewGradesByStudent(String studentId) {
-        // Print out all the grades by the student with the provided studentID
-        // The variable found is for checking if the student has grades added
+    public String viewGradesByStudent(String studentId) {
+        StringBuilder sb = new StringBuilder();
         boolean found = false;
         int totalCourses = 0;
 
         for (Grade grade : grades) {
-            // To prevent the code from throwing an error when the grades array is empty
             if (grade == null) continue;
 
             if (grade.getStudentId().equals(studentId)) {
                 totalCourses++;
 
-                // Printing the table header once for when a grade for found
-                // for the student. It doesn't print again because found is set to true
                 if (!found) {
-                    System.out.println("GRADE HISTORY");
-                    System.out.println("-------------------------------------------------------------------------------------");
-                    System.out.println("GRD ID   | DATE       | SUBJECT          | TYPE       | GRADE");
-                    System.out.println("-------------------------------------------------------------------------------------");
+                    sb.append("GRADE HISTORY\n");
+                    sb.append("-------------------------------------------------------------------------------------\n");
+                    sb.append("GRD ID   | DATE       | SUBJECT          | TYPE       | GRADE\n");
+                    sb.append("-------------------------------------------------------------------------------------\n");
                     found = true;
                 }
 
-                System.out.printf("%-9s | %-10s | %-16s | %-10s | %-5.1f%%\n",
+                sb.append(String.format("%-9s | %-10s | %-16s | %-10s | %-5.1f%%\n",
                         grade.getGradeId(),
                         grade.getDate(),
                         grade.getSubject().getSubjectName(),
                         grade.getSubject().getSubjectType(),
-                        grade.getGrade());
+                        grade.getGrade()));
             }
         }
 
         if (!found) {
-            System.out.println("_______________________________________________");
-            System.out.println("No grades recorded for this student");
-            System.out.println("_______________________________________________");
-            System.out.println();
+            sb.append("_______________________________________________\n");
+            sb.append("No grades recorded for this student\n");
+            sb.append("_______________________________________________\n\n");
         } else {
-            System.out.println();
-            System.out.printf("Total Grades: %d\n", totalCourses);
-            System.out.printf("Core Subjects Average: %.1f%%\n", calculateCoreAverage(studentId));
-            System.out.printf("Elective Subjects Average: %.1f%%\n", calculateElectiveAverage(studentId));
-            System.out.printf("Overall Average: %.1f%%\n", calculateOverallAverage(studentId));
-            System.out.println();
-
+            sb.append("\n");
+            sb.append(String.format("Total Grades: %d\n", totalCourses));
+            sb.append(String.format("Core Subjects Average: %.1f%%\n", calculateCoreAverage(studentId)));
+            sb.append(String.format("Elective Subjects Average: %.1f%%\n", calculateElectiveAverage(studentId)));
+            sb.append(String.format("Overall Average: %.1f%%\n", calculateOverallAverage(studentId)));
         }
+
+        return sb.toString();
     }
+
 
     public double calculateCoreAverage(String studentId) {
         double gradeSum = 0;

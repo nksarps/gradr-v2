@@ -1,0 +1,11 @@
+StudentID,SubjectName,SubjectType,Grade
+STU001,Mathematics,Core,85
+STU999,English,Core,92
+STU002,Mathematics,Core,150
+STU003,InvalidSubject,Core,78
+STU004,Music,WrongType,88
+STU005,Mathematics,Core,abc
+INVALID,English,Core,75
+STU001,Science,Core,-10
+STU002,Art,Elective,
+STU003,English,Core,95

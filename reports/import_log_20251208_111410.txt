@@ -1,0 +1,17 @@
+BULK IMPORT LOG
+_______________________________________________
+
+Source File: test_case_grades.csv
+Import Date: 2025-12-08
+Total Rows: 12
+Successfully Imported: 5
+Failed: 7
+
+Failed Records:
+Row 6: Invalid student ID (STU002)
+Row 7: Invalid student ID (STU002)
+Row 8: Invalid student ID (STU002)
+Row 9: Invalid student ID (STU002)
+Row 11: Invalid student ID (InvalidID)
+Row 12: Grade out of range (200)
+Row 13: Invalid student ID (STU002)
