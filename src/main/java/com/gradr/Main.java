@@ -51,14 +51,54 @@ public class Main {
                         String name = scanner.nextLine();
 
                         System.out.print("Enter student age: ");
-                        int age = scanner.nextInt();
-                        scanner.nextLine();
+                        String ageInput = scanner.nextLine();
+                        
+                        // Validate age format and range
+                        int age;
+                        try {
+                            age = Integer.parseInt(ageInput);
+                            // Age should be between 5 and 100 (reasonable student age range)
+                            if (age < 5 || age > 100) {
+                                throw new InvalidStudentDataException(
+                                        "X ERROR: InvalidStudentDataException\n   Age must be between 5 and 100.\n   You entered: " + ageInput
+                                );
+                            }
+                        } catch (NumberFormatException e) {
+                            throw new InvalidStudentDataException(
+                                    "X ERROR: InvalidStudentDataException\n   Age must be a valid number.\n   You entered: " + ageInput
+                            );
+                        }
 
                         System.out.print("Enter student email: ");
                         String email = scanner.nextLine();
+                        
+                        // Validate email format using regex
+                        // Pattern: allows letters, numbers, dots, hyphens, underscores before @, 
+                        // then domain with letters, numbers, dots, and hyphens
+                        String emailRegex = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$";
+                        if (!email.matches(emailRegex)) {
+                            throw new InvalidStudentDataException(
+                                    "X ERROR: InvalidStudentDataException\n   Email format is invalid.\n   Expected format: example@domain.com\n   You entered: " + email
+                            );
+                        }
 
                         System.out.print("Enter student phone: ");
                         String phone = scanner.nextLine();
+                        
+                        // Validate phone format using regex
+                        // Pattern: allows various phone formats:
+                        // - (123) 456-7890
+                        // - 123-456-7890
+                        // - 123.456.7890
+                        // - 1234567890
+                        // - +1 123 456 7890
+                        // - etc.
+                        String phoneRegex = "^(\\+?\\d{1,3}[-.\\s]?)?\\(?\\d{3}\\)?[-.\\s]?\\d{3}[-.\\s]?\\d{4}$";
+                        if (!phone.matches(phoneRegex)) {
+                            throw new InvalidStudentDataException(
+                                    "X ERROR: InvalidStudentDataException\n   Phone number format is invalid.\n   Expected formats: (123) 456-7890, 123-456-7890, 1234567890, etc.\n   You entered: " + phone
+                            );
+                        }
                         System.out.println();
 
                         System.out.println("Student type:");
@@ -111,6 +151,9 @@ public class Main {
                         scanner.nextLine(); // Clear invalid input
                         System.out.println();
                     } catch (InvalidMenuChoiceException e) {
+                        System.out.println(e.getMessage());
+                        System.out.println();
+                    } catch (InvalidStudentDataException e) {
                         System.out.println(e.getMessage());
                         System.out.println();
                     }
