@@ -3,6 +3,9 @@ package com.gradr;
 import com.gradr.exceptions.*;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -27,6 +30,7 @@ public class Main {
         do {
             displayMainMenu();
 
+            // Checking if the user entered a valid number between 1 and 10
             try {
                 System.out.print("Enter choice: ");
                 choice = scanner.nextInt();
@@ -34,10 +38,11 @@ public class Main {
                 System.out.println();
             } catch (InputMismatchException e) {
                 System.out.println(
-                        "X ERROR: InvalidMenuChoiceException\n   Please enter a valid number (1-10).\n"
+                        "\n\nX ERROR: InvalidMenuChoiceException\n   Please enter a valid number (1-10).\n"
                 );
+                System.out.println();
                 scanner.nextLine();
-                break;
+                continue;
             }
 
             switch (choice) {
@@ -63,7 +68,7 @@ public class Main {
                                         "X ERROR: InvalidStudentDataException\n   Age must be between 5 and 100.\n   You entered: " + ageInput
                                 );
                             }
-                        } catch (NumberFormatException e) {
+                        } catch (NumberFormatException e) { // if the user entered a non-number age
                             throw new InvalidStudentDataException(
                                     "X ERROR: InvalidStudentDataException\n   Age must be a valid number.\n   You entered: " + ageInput
                             );
@@ -86,13 +91,6 @@ public class Main {
                         String phone = scanner.nextLine();
                         
                         // Validate phone format using regex
-                        // Pattern: allows various phone formats:
-                        // - (123) 456-7890
-                        // - 123-456-7890
-                        // - 123.456.7890
-                        // - 1234567890
-                        // - +1 123 456 7890
-                        // - etc.
                         String phoneRegex = "^(\\+?\\d{1,3}[-.\\s]?)?\\(?\\d{3}\\)?[-.\\s]?\\d{3}[-.\\s]?\\d{4}$";
                         if (!phone.matches(phoneRegex)) {
                             throw new InvalidStudentDataException(
@@ -166,6 +164,7 @@ public class Main {
                     int regularStudentsDisplayCount = 0;
                     int honorStudentsDisplayCount = 0;
 
+                    // getting the number of students added to the system
                     int studentCount = studentManager.getStudentCount();
 
                     // Displaying student details
@@ -236,7 +235,7 @@ public class Main {
                         System.out.println("2. Elective Subject (Music, Art, Physical Education)\n");
 
                         System.out.print("Select type (1-2): ");
-                        int subjectTypeChoice;
+                        int subjectTypeChoice = 0;
 
                         try {
                             subjectTypeChoice = scanner.nextInt();
@@ -288,6 +287,7 @@ public class Main {
                             break;
                         }
 
+                        // Checking if the user entered a valid number between 1 and 3 for the subject choice
                         if (subjectChoice < 1 || subjectChoice > 3) {
                             throw new InvalidMenuChoiceException(
                                     "X ERROR: InvalidMenuChoiceException\n   Please select a valid option (1-3).\n   You entered: " + subjectChoice
@@ -315,7 +315,7 @@ public class Main {
                         System.out.println();
 
                         System.out.print("Enter grade (0-100): ");
-                        int gradeInput;
+                        int gradeInput = 0;
 
                         try {
                             gradeInput = scanner.nextInt();
@@ -330,6 +330,7 @@ public class Main {
 
                         grade = new Grade(studentId, subject, gradeInput);
 
+                        // Checking if the grade is between 0 and 100
                         if (grade.recordGrade(gradeInput)) {
                             grade.setGradeId();
 
@@ -359,6 +360,7 @@ public class Main {
                                 );
                             }
                         } else {
+                            // If the grade is not between 0 and 100, throw an error
                             throw new InvalidGradeException(
                                     "X ERROR: InvalidGradeException\n   Grade must be between 0 and 100.\n   You entered: " + gradeInput + "\n"
                             );
@@ -379,23 +381,23 @@ public class Main {
                     studentId = scanner.nextLine();
                     System.out.println();
 
-                    // Get student using ID and display student details
+                    // Get student using ID and display student grade report
 
                     try {
                         student = studentManager.findStudent(studentId);
 
                         //If there is a student associated with the ID, continue, else
-                        // display an error message
+                        // throw an error 
                         if (student != null) {
                             // Checking if student has grades recorded
                             boolean hasGrades = false;
+
                             for (Grade studentGrade : gradeManager.getGrades()) {
                                 // Using the condition, studentGrade != null, so it doesn't throw an error when
-                                // the student has no grades recorded for the display of student
-                                // details
+                                // the student has no grades recorded for the display of student grade report
                                 if (studentGrade != null && studentGrade.getStudentId().equals(studentId)) {
                                     hasGrades = true;
-                                    break;
+                                    break; 
                                 }
                             }
 
@@ -440,10 +442,6 @@ public class Main {
                                 System.out.println(gradeManager.viewGradesByStudent(studentId));
                             }
 
-                        } else {
-                            System.out.println("Invalid Student ID. Student with this ID does not exist");
-                            System.out.println();
-                            break;
                         }
                     } catch (StudentNotFoundException e) {
                         System.out.println(e.getMessage());
@@ -465,7 +463,7 @@ public class Main {
 
                         System.out.printf("Student: %s - %s\n", student.getStudentId(), student.getName());
                         System.out.printf("Type: %s Student\n", student.getStudentType());
-                        // Grades are added for subjects so this works for the number of grades
+                        // getEnrolledSubjectsCount() returns the number of subjects the student has grades in
                         System.out.printf("Total Grades: %d\n", student.getEnrolledSubjectsCount());
                         System.out.println();
 
@@ -527,6 +525,7 @@ public class Main {
                                     content.append("\n");
                                 }
 
+                                // Added option 3 for when user wants BOTH
                                 if (exportOption == 2 || exportOption == 3) {
                                     if (exportOption == 3) {
                                         content.append("==================================================\n");
@@ -553,22 +552,32 @@ public class Main {
 
                                 exporter.exportGradeToTXT(content.toString());
 
+                                // Getting the size of the exported file
+                                Path filePath = Paths.get("./reports/" + fileName + ".txt");
+                                String fileSizeFormatted;
+                                try {
+                                    long fileSizeBytes = Files.size(filePath);
+                                    fileSizeFormatted = formatFileSize(fileSizeBytes);
+                                } catch (IOException e) {
+                                    fileSizeFormatted = "Unknown";
+                                }
+
                                 System.out.println("Report exported successfully!");
                                 System.out.printf("File: %s.txt\n", fileName);
                                 System.out.println("Location: ./reports/");
-                                System.out.println("Size: 2.4 KB"); // change to the size of the file
-                                System.out.printf("Contains: %d grades, averages, performance summary\n", student.getEnrolledSubjectsCount()); // change to what it actually contains
+                                System.out.printf("Size: %s\n", fileSizeFormatted);
+                                System.out.printf("Contains: %d grades, averages, performance summary\n", student.getEnrolledSubjectsCount());
                                 System.out.println();
 
                             } catch (FileExportException e) {
                                 throw new FileExportException(
-                                        "X ERROR: FileExportException\n   Failed to export file"
+                                        "X ERROR: FileExportException\n   Failed to export file" + fileName + ".txt"
 
                                 );
                             }
                         } else {
                             throw new InvalidMenuChoiceException(
-                                    "X ERROR: InvalidMenuChoiceException\n   Please select a valid option (1-3).\n   You entered: " + exportOption
+                                    "X ERROR: InvalidMenuChoiceException\n   Please select a valid option (1-3).\n"
                             );
                         }
                     } catch (StudentNotFoundException | InvalidMenuChoiceException | FileExportException e) {
@@ -588,12 +597,6 @@ public class Main {
 
                     try {
                         student = studentManager.findStudent(studentId);
-
-                        if (student == null) {
-                            System.out.println("Invalid ID. Student with this ID does not exist");
-                            System.out.println();
-                            break;
-                        }
 
                         // Check if student has any grades
                         if (student.getEnrolledSubjectsCount() == 0) {
@@ -625,6 +628,7 @@ public class Main {
                     System.out.println("Example: STU001,Mathematics,Core,85");
                     System.out.println();
 
+                    // import files from the imports directory
                     String csvFilePath = "./imports/";
 
                     System.out.print("Enter filename (without extension): ");
@@ -674,6 +678,8 @@ public class Main {
                                 // data[0] because student id is the first element in the data (String) array
                                 Student studentCheck = studentManager.findStudent(data[0]);
 
+                                // if the student is not found, add the failed record to the list
+                                // and log why it failed then move on to the next row
                                 if (studentCheck == null) {
                                     failCount++;
                                     failedRecords.add(String.format("Row %d: Invalid student ID (%s)", lineNumber, data[0]));
@@ -1038,6 +1044,23 @@ public class Main {
         } while (choice != 10);
 
         scanner.close();
+    }
+
+    /**
+     * Formats file size from bytes to human-readable format (B, KB, MB)
+     * @param bytes The file size in bytes
+     * @return Formatted string (e.g., "1.5 KB", "256 B", "2.3 MB")
+     */
+    private static String formatFileSize(long bytes) {
+        if (bytes < 1024) {
+            return bytes + " B";
+        } else if (bytes < 1024 * 1024) {
+            double kb = bytes / 1024.0;
+            return String.format("%.2f KB", kb);
+        } else {
+            double mb = bytes / (1024.0 * 1024.0);
+            return String.format("%.2f MB", mb);
+        }
     }
 
     // Class for displaying the Main Menu
