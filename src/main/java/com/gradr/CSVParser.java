@@ -59,7 +59,7 @@ public class CSVParser {
                 }
             }
         } catch (IOException e) {
-            throw new CSVParseException("Failed to read new CSV file: " + filePath);
+            throw new CSVParseException("X ERROR: CSVParseException\n   Failed to read new CSV file: " + filePath);
         } finally {
             if (reader != null) {
                 reader.close();
