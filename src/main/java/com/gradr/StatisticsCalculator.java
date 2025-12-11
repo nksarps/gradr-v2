@@ -14,6 +14,7 @@ public class StatisticsCalculator {
     /**
      * Generates a comprehensive class statistics report
      * @return Formatted string containing all class statistics
+     * @throws StudentNotFoundException
      */
     public String generateClassStatistics() throws StudentNotFoundException {
         StringBuilder report = new StringBuilder();
@@ -21,14 +22,14 @@ public class StatisticsCalculator {
         report.append("CLASS STATISTICS\n");
         report.append("_______________________________________________\n\n");
 
-        // Basic counts
+        // Getting the number of students and the number of grades added
         int totalStudents = studentManager.getStudentCount();
         int totalGrades = gradeManager.getGradeCount();
 
         report.append(String.format("Total Students: %d\n", totalStudents));
         report.append(String.format("Total Grades Recorded: %d\n\n", totalGrades));
 
-        // If there are no grades recorded for student, return this and exit
+        // If there are no grades recorded for students, return this and exit
         if (totalGrades == 0) {
             report.append("No grades recorded yet. Statistics unavailable.\n");
             return report.toString();
@@ -65,7 +66,7 @@ public class StatisticsCalculator {
     }
 
     /**
-     * Generates grade distribution with ASCII bar chart
+     * Generates grade distribution
      */
     private String generateGradeDistribution() {
         StringBuilder dist = new StringBuilder();
@@ -105,10 +106,12 @@ public class StatisticsCalculator {
      * Generates a single line of the distribution chart
      */
     private String generateDistributionLine(String label, int count, int total) {
+        // Calculating the percentage of students who got that grade
         double percentage = (count * 100.0) / total;
 
-        // Create ASCII bar (each █ represents ~2%)
+        // Making each bar represent 2%
         int barLength = (int) (percentage / 2);
+
         StringBuilder bar = new StringBuilder();
         for (int i = 0; i < barLength; i++) {
             bar.append("|");
@@ -129,6 +132,7 @@ public class StatisticsCalculator {
     private String generateStatisticalAnalysis() {
         StringBuilder stats = new StringBuilder();
 
+        // getAllGradesInArray returns all the grade values added for students in the grades array
         double[] allGrades = getAllGradesInArray();
 
         if (allGrades.length == 0) {
@@ -166,9 +170,14 @@ public class StatisticsCalculator {
         for (Grade grade : gradeManager.getGrades()) {
             if (grade == null) continue;
 
+            // if there is no highestGrade OR this grade is bigger than the current
+            // highestGrade, make this grade the highest grade
             if (highestGrade == null || grade.getGrade() > highestGrade.getGrade()) {
                 highestGrade = grade;
             }
+
+            // if there is no lowestGrade OR this grade is lower than the current
+            // lowestGrade, make this grade the highest grade
             if (lowestGrade == null || grade.getGrade() < lowestGrade.getGrade()) {
                 lowestGrade = grade;
             }
@@ -232,6 +241,7 @@ public class StatisticsCalculator {
 
         int regularCount = 0;
         int honorsCount = 0;
+
         double regularTotal = 0.0;
         double honorsTotal = 0.0;
 
@@ -262,7 +272,7 @@ public class StatisticsCalculator {
     }
 
     // Helper methods for statistical calculations
-
+    // Gets all the grade values in the grades array
     private double[] getAllGradesInArray() {
         int count = 0;
         // Getting the total number of grades in the array
@@ -284,10 +294,12 @@ public class StatisticsCalculator {
 
     private double calculateMean(double[] grades) {
         if (grades.length == 0) return 0.0;
+
         double sum = 0;
         for (double grade : grades) {
             sum += grade;
         }
+
         return sum / grades.length;
     }
 
@@ -298,9 +310,10 @@ public class StatisticsCalculator {
         double[] sorted = grades.clone();
         java.util.Arrays.sort(sorted);
 
+        // finding median for when there is an even number of grades
         if (sorted.length % 2 == 0) {
             return (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2.0;
-        } else {
+        } else { // odd number of grades
             return sorted[sorted.length / 2];
         }
     }
@@ -370,6 +383,7 @@ public class StatisticsCalculator {
 
         for (Grade grade : gradeManager.getGrades()) {
             if (grade == null) continue;
+
             if (grade.getSubject().getSubjectName().equals(subjectName)) {
                 sum += grade.getGrade();
                 count++;
