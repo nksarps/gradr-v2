@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -334,6 +335,157 @@ public class MultiFormatFileHandler {
                 "X ERROR: FileExportException\n   Failed to import CSV file: " + e.getMessage()
             );
         }
+    }
+    
+    /**
+     * Import student report from JSON format
+     * Parses JSON file and creates StudentReport object
+     * Time Complexity: O(n) where n is the number of grades
+     */
+    public StudentReport importFromJSON(Path filePath) throws FileExportException {
+        long startTime = System.nanoTime();
+        
+        // Validate file exists and is readable
+        validateFilePath(filePath, true, false);
+        
+        try {
+            // Read entire JSON file
+            String jsonContent = Files.readString(filePath, StandardCharsets.UTF_8);
+            
+            // Parse JSON manually (simple parser for our format)
+            StudentReport report = parseJSONReport(jsonContent);
+            
+            long readTime = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
+            System.out.printf("JSON import completed in %dms\n", readTime);
+            return report;
+            
+        } catch (IOException e) {
+            throw new FileExportException(
+                "X ERROR: FileExportException\n   Failed to import JSON file: " + e.getMessage()
+            );
+        } catch (Exception e) {
+            throw new FileExportException(
+                "X ERROR: FileExportException\n   Invalid JSON format: " + e.getMessage()
+            );
+        }
+    }
+    
+    /**
+     * Parse JSON content into StudentReport
+     * Simple JSON parser for our specific format
+     */
+    private StudentReport parseJSONReport(String jsonContent) throws FileExportException {
+        try {
+            // Remove whitespace and newlines for easier parsing
+            String cleaned = jsonContent.replaceAll("\\s+", " ").trim();
+            
+            // Extract student info
+            String studentId = extractJSONValue(cleaned, "\"id\"");
+            String studentName = extractJSONValue(cleaned, "\"name\"");
+            String studentType = extractJSONValue(cleaned, "\"type\"");
+            double overallAverage = Double.parseDouble(extractJSONValue(cleaned, "\"overallAverage\""));
+            
+            // Create report
+            StudentReport report = new StudentReport(
+                studentId, studentName, studentType, overallAverage, "Imported"
+            );
+            
+            // Extract grades array
+            int gradesStart = cleaned.indexOf("\"grades\"");
+            if (gradesStart == -1) {
+                return report; // No grades
+            }
+            
+            int arrayStart = cleaned.indexOf("[", gradesStart);
+            int arrayEnd = cleaned.lastIndexOf("]");
+            
+            if (arrayStart == -1 || arrayEnd == -1) {
+                return report; // Empty grades array
+            }
+            
+            String gradesArray = cleaned.substring(arrayStart + 1, arrayEnd);
+            
+            // Parse each grade object
+            int pos = 0;
+            while (pos < gradesArray.length()) {
+                int objStart = gradesArray.indexOf("{", pos);
+                if (objStart == -1) break;
+                
+                int objEnd = findMatchingBrace(gradesArray, objStart);
+                if (objEnd == -1) break;
+                
+                String gradeObj = gradesArray.substring(objStart, objEnd + 1);
+                
+                String gradeId = extractJSONValue(gradeObj, "\"gradeId\"");
+                String date = extractJSONValue(gradeObj, "\"date\"");
+                String subject = extractJSONValue(gradeObj, "\"subject\"");
+                String type = extractJSONValue(gradeObj, "\"type\"");
+                double grade = Double.parseDouble(extractJSONValue(gradeObj, "\"grade\""));
+                
+                GradeData gradeData = new GradeData(gradeId, date, subject, type, grade);
+                report.addGrade(gradeData);
+                
+                pos = objEnd + 1;
+            }
+            
+            return report;
+            
+        } catch (Exception e) {
+            throw new FileExportException(
+                "X ERROR: FileExportException\n   Failed to parse JSON: " + e.getMessage()
+            );
+        }
+    }
+    
+    /**
+     * Extract value from JSON string
+     */
+    private String extractJSONValue(String json, String key) {
+        int keyPos = json.indexOf(key);
+        if (keyPos == -1) return "";
+        
+        int colonPos = json.indexOf(":", keyPos);
+        if (colonPos == -1) return "";
+        
+        int start = colonPos + 1;
+        while (start < json.length() && (json.charAt(start) == ' ' || json.charAt(start) == '"')) {
+            start++;
+        }
+        
+        int end = start;
+        if (json.charAt(start - 1) == '"') {
+            // String value
+            end = json.indexOf("\"", start);
+        } else {
+            // Number value
+            while (end < json.length() && 
+                   (Character.isDigit(json.charAt(end)) || json.charAt(end) == '.' || 
+                    json.charAt(end) == '-' || json.charAt(end) == 'e' || json.charAt(end) == 'E' ||
+                    json.charAt(end) == '+' || json.charAt(end) == '-')) {
+                end++;
+            }
+        }
+        
+        if (end == -1 || end > json.length()) return "";
+        
+        String value = json.substring(start - (json.charAt(start - 1) == '"' ? 1 : 0), 
+                                      end + (json.charAt(start - 1) == '"' ? 0 : 0));
+        return value.replace("\"", "").trim();
+    }
+    
+    /**
+     * Find matching closing brace
+     */
+    private int findMatchingBrace(String str, int start) {
+        int depth = 0;
+        for (int i = start; i < str.length(); i++) {
+            if (str.charAt(i) == '{') depth++;
+            if (str.charAt(i) == '}') {
+                depth--;
+                if (depth == 0) return i;
+            }
+        }
+        return -1;
     }
     
     /**

@@ -3,6 +3,7 @@ package com.gradr;
 import com.gradr.exceptions.*;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
@@ -684,12 +685,248 @@ public class Main {
 
                     break;
                 case 6:
-                    System.out.println("IMPORT DATA (Multi-format support) [ENHANCED]");
-                    System.out.println("_______________________________________________");
-                    System.out.println();
-                    System.out.println("This feature will support CSV, JSON, and Binary format imports.");
-                    System.out.println("Implementation coming soon...");
-                    System.out.println();
+                    try {
+                        System.out.println("IMPORT DATA (Multi-format support)");
+                        System.out.println("_______________________________________________");
+                        System.out.println();
+                        
+                        System.out.println("Import Format Options:");
+                        System.out.println("1. CSV Format");
+                        System.out.println("2. JSON Format");
+                        System.out.println("3. Binary Format (.dat)");
+                        System.out.println("4. Return to Main Menu");
+                        System.out.println();
+                        
+                        System.out.print("Select format (1-4): ");
+                        int importFormat;
+                        try {
+                            importFormat = scanner.nextInt();
+                            scanner.nextLine();
+                        } catch (InputMismatchException e) {
+                            System.out.println("\nX ERROR: InvalidMenuChoiceException\n   Please enter a valid number (1-4).\n");
+                            scanner.nextLine();
+                            break;
+                        }
+                        
+                        System.out.println();
+                        
+                        if (importFormat == 4) {
+                            break;
+                        }
+                        
+                        if (importFormat < 1 || importFormat > 3) {
+                            System.out.println("X ERROR: InvalidMenuChoiceException\n   Please select a valid option (1-4).\n");
+                            break;
+                        }
+                        
+                        // Get file path
+                        System.out.print("Enter file path (or filename if in default directory): ");
+                        String fileInput = scanner.nextLine().trim();
+                        System.out.println();
+                        
+                        Path filePath;
+                        if (fileInput.contains("/") || fileInput.contains("\\") || fileInput.contains(":")) {
+                            // Absolute or relative path provided
+                            filePath = Paths.get(fileInput);
+                        } else {
+                            // Just filename - use appropriate default directory
+                            String defaultDir = "";
+                            String extension = "";
+                            switch (importFormat) {
+                                case 1:
+                                    defaultDir = "./data/csv/";
+                                    extension = fileInput.endsWith(".csv") ? "" : ".csv";
+                                    break;
+                                case 2:
+                                    defaultDir = "./data/json/";
+                                    extension = fileInput.endsWith(".json") ? "" : ".json";
+                                    break;
+                                case 3:
+                                    defaultDir = "./data/binary/";
+                                    extension = fileInput.endsWith(".dat") ? "" : ".dat";
+                                    break;
+                            }
+                            filePath = Paths.get(defaultDir + fileInput + extension);
+                        }
+                        
+                        System.out.println("Importing from: " + filePath);
+                        System.out.println("Validating file...");
+                        
+                        MultiFormatFileHandler fileHandler = new MultiFormatFileHandler();
+                        StudentReport importedReport = null;
+                        long importStartTime = System.currentTimeMillis();
+                        long fileSize = 0;
+                        
+                        try {
+                            fileSize = Files.size(filePath);
+                        } catch (IOException e) {
+                            System.out.println("X ERROR: File not found or cannot access file size\n");
+                            break;
+                        }
+                        
+                        try {
+                            switch (importFormat) {
+                                case 1:
+                                    // CSV import - parse as grade data
+                                    System.out.println("Processing CSV format...");
+                                    List<String[]> csvData = fileHandler.importCSV(filePath);
+                                    
+                                    if (csvData.isEmpty()) {
+                                        System.out.println("X ERROR: CSV file is empty or has no valid data\n");
+                                        break;
+                                    }
+                                    
+                                    System.out.println("✓ CSV file parsed successfully");
+                                    System.out.println("Found " + csvData.size() + " grade records");
+                                    System.out.println();
+                                    
+                                    // Process CSV data
+                                    int successCount = 0;
+                                    int failCount = 0;
+                                    List<String> errors = new ArrayList<>();
+                                    
+                                    for (int i = 0; i < csvData.size(); i++) {
+                                        String[] row = csvData.get(i);
+                                        if (row.length < 4) {
+                                            failCount++;
+                                            errors.add("Row " + (i + 2) + ": Insufficient columns");
+                                            continue;
+                                        }
+                                        
+                                        try {
+                                            String csvStudentId = row[0].trim();
+                                            String subjectName = row[1].trim();
+                                            String subjectType = row[2].trim();
+                                            double gradeValue = Double.parseDouble(row[3].trim());
+                                            
+                                            // Validate student exists
+                                            Student csvStudent = studentManager.findStudent(csvStudentId);
+                                            if (csvStudent == null) {
+                                                failCount++;
+                                                errors.add("Row " + (i + 2) + ": Student not found (" + csvStudentId + ")");
+                                                continue;
+                                            }
+                                            
+                                            // Validate grade range
+                                            if (gradeValue < 0 || gradeValue > 100) {
+                                                failCount++;
+                                                errors.add("Row " + (i + 2) + ": Grade out of range (" + gradeValue + ")");
+                                                continue;
+                                            }
+                                            
+                                            // Create subject
+                                            Subject csvSubject;
+                                            if (subjectType.equalsIgnoreCase("Core")) {
+                                                csvSubject = new CoreSubject(subjectName, "");
+                                            } else if (subjectType.equalsIgnoreCase("Elective")) {
+                                                csvSubject = new ElectiveSubject(subjectName, "");
+                                            } else {
+                                                failCount++;
+                                                errors.add("Row " + (i + 2) + ": Invalid subject type (" + subjectType + ")");
+                                                continue;
+                                            }
+                                            
+                                            // Create and add grade
+                                            Grade newGrade = new Grade(csvStudentId, csvSubject, gradeValue);
+                                            gradeManager.addGrade(newGrade);
+                                            successCount++;
+                                            
+                                        } catch (NumberFormatException e) {
+                                            failCount++;
+                                            errors.add("Row " + (i + 2) + ": Invalid grade value");
+                                        } catch (Exception e) {
+                                            failCount++;
+                                            errors.add("Row " + (i + 2) + ": " + e.getMessage());
+                                        }
+                                    }
+                                    
+                                    long importTime = System.currentTimeMillis() - importStartTime;
+                                    
+                                    // Record I/O operation
+                                    performanceMonitor.recordIOOperation("CSV Read", 
+                                        filePath.getFileName().toString(), importTime, fileSize, true);
+                                    
+                                    System.out.println("Import Summary:");
+                                    System.out.println("  Successful: " + successCount);
+                                    System.out.println("  Failed: " + failCount);
+                                    System.out.println("  Time: " + importTime + "ms");
+                                    System.out.println("  File Size: " + formatFileSize(fileSize));
+                                    
+                                    if (!errors.isEmpty() && errors.size() <= 10) {
+                                        System.out.println();
+                                        System.out.println("Errors:");
+                                        for (String error : errors) {
+                                            System.out.println("  - " + error);
+                                        }
+                                    } else if (errors.size() > 10) {
+                                        System.out.println();
+                                        System.out.println("Errors (showing first 10):");
+                                        for (int i = 0; i < 10; i++) {
+                                            System.out.println("  - " + errors.get(i));
+                                        }
+                                        System.out.println("  ... and " + (errors.size() - 10) + " more errors");
+                                    }
+                                    System.out.println();
+                                    break;
+                                    
+                                case 2:
+                                    // JSON import
+                                    System.out.println("Processing JSON format...");
+                                    importedReport = fileHandler.importFromJSON(filePath);
+                                    System.out.println("✓ JSON file parsed successfully");
+                                    
+                                    // Process imported report
+                                    int jsonImportedCount = processImportedReport(importedReport, studentManager, gradeManager);
+                                    
+                                    long jsonImportTime = System.currentTimeMillis() - importStartTime;
+                                    
+                                    // Record I/O operation
+                                    performanceMonitor.recordIOOperation("JSON Read", 
+                                        filePath.getFileName().toString(), jsonImportTime, fileSize, true);
+                                    
+                                    System.out.println("Import Summary:");
+                                    System.out.println("  Student: " + importedReport.getStudentName() + " (" + importedReport.getStudentId() + ")");
+                                    System.out.println("  Grades Imported: " + jsonImportedCount);
+                                    System.out.println("  Time: " + jsonImportTime + "ms");
+                                    System.out.println("  File Size: " + formatFileSize(fileSize));
+                                    System.out.println();
+                                    break;
+                                    
+                                case 3:
+                                    // Binary import
+                                    System.out.println("Processing Binary format...");
+                                    importedReport = fileHandler.importFromBinary(filePath);
+                                    System.out.println("✓ Binary file parsed successfully");
+                                    
+                                    // Process imported report
+                                    int binaryImportedCount = processImportedReport(importedReport, studentManager, gradeManager);
+                                    
+                                    long binaryImportTime = System.currentTimeMillis() - importStartTime;
+                                    
+                                    // Record I/O operation
+                                    performanceMonitor.recordIOOperation("Binary Read", 
+                                        filePath.getFileName().toString(), binaryImportTime, fileSize, true);
+                                    
+                                    System.out.println("Import Summary:");
+                                    System.out.println("  Student: " + importedReport.getStudentName() + " (" + importedReport.getStudentId() + ")");
+                                    System.out.println("  Grades Imported: " + binaryImportedCount);
+                                    System.out.println("  Time: " + binaryImportTime + "ms");
+                                    System.out.println("  File Size: " + formatFileSize(fileSize));
+                                    System.out.println();
+                                    break;
+                            }
+                            
+                        } catch (FileExportException e) {
+                            System.out.println();
+                            System.out.println("X ERROR: " + e.getMessage());
+                            System.out.println();
+                        }
+                        
+                    } catch (Exception e) {
+                        System.out.println();
+                        System.out.println("X ERROR: " + e.getClass().getSimpleName() + "\n   " + e.getMessage());
+                        System.out.println();
+                    }
                     break;
                 case 7:
                     System.out.println("BULK IMPORT GRADES");
@@ -2357,6 +2594,74 @@ public class Main {
             double mb = bytes / (1024.0 * 1024.0);
             return String.format("%.2f MB", mb);
         }
+    }
+    
+    /**
+     * Process imported StudentReport and add grades to the system
+     * @return Number of grades successfully imported
+     */
+    private static int processImportedReport(StudentReport report, StudentManager studentManager, GradeManager gradeManager) {
+        if (report == null) {
+            return 0;
+        }
+        
+        int importedCount = 0;
+        String reportStudentId = report.getStudentId();
+        
+        // Check if student exists, if not, create it
+        try {
+            Student reportStudent = studentManager.findStudent(reportStudentId);
+            if (reportStudent == null) {
+                // Student doesn't exist - would need to create, but we'll skip for now
+                System.out.println("⚠ Warning: Student " + reportStudentId + " not found. Grades will be imported but student must exist.");
+            }
+        } catch (Exception e) {
+            System.out.println("⚠ Warning: Could not verify student " + reportStudentId);
+        }
+        
+        // Import all grades from the report
+        for (GradeData gradeData : report.getGrades()) {
+            try {
+                // Verify student exists
+                try {
+                    studentManager.findStudent(reportStudentId);
+                } catch (Exception e) {
+                    System.out.println("⚠ Skipping grade - Student " + reportStudentId + " not found");
+                    continue;
+                }
+                
+                // Create subject
+                Subject reportSubject;
+                if (gradeData.getSubjectType().equalsIgnoreCase("Core")) {
+                    reportSubject = new CoreSubject(gradeData.getSubjectName(), "");
+                } else {
+                    reportSubject = new ElectiveSubject(gradeData.getSubjectName(), "");
+                }
+                
+                // Check if grade already exists (by gradeId)
+                boolean gradeExists = false;
+                for (Grade existingGrade : gradeManager.getGrades()) {
+                    if (existingGrade != null && existingGrade.getGradeId().equals(gradeData.getGradeId())) {
+                        gradeExists = true;
+                        break;
+                    }
+                }
+                
+                if (!gradeExists) {
+                    // Create and add grade
+                    Grade newGrade = new Grade(reportStudentId, reportSubject, gradeData.getGrade());
+                    gradeManager.addGrade(newGrade);
+                    importedCount++;
+                } else {
+                    System.out.println("⚠ Grade " + gradeData.getGradeId() + " already exists, skipping");
+                }
+                
+            } catch (Exception e) {
+                System.out.println("⚠ Error importing grade " + gradeData.getGradeId() + ": " + e.getMessage());
+            }
+        }
+        
+        return importedCount;
     }
 
     // Class for displaying the Main Menu
