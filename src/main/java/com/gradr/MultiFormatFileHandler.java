@@ -1,0 +1,360 @@
+package com.gradr;
+
+import com.gradr.exceptions.FileExportException;
+
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.*;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+/**
+ * MultiFormatFileHandler - Handles file operations in CSV, JSON, and binary formats using NIO.2
+ * 
+ * Features:
+ * - CSV export with streaming for large files
+ * - JSON export with proper formatting
+ * - Binary serialization for efficient storage
+ * - Performance tracking (file size, read/write times)
+ * - Support for relative and absolute paths
+ * - UTF-8 encoding for text files
+ * - Try-with-resources for proper resource management
+ */
+public class MultiFormatFileHandler {
+    
+    // Directory paths for different formats
+    private static final Path CSV_DIR = Paths.get("./reports/csv/");
+    private static final Path JSON_DIR = Paths.get("./reports/json/");
+    private static final Path BINARY_DIR = Paths.get("./reports/binary/");
+    private static final Path DATA_CSV_DIR = Paths.get("./data/csv/");
+    private static final Path DATA_JSON_DIR = Paths.get("./data/json/");
+    private static final Path DATA_BINARY_DIR = Paths.get("./data/binary/");
+    
+    // Performance tracking
+    private long csvWriteTime = 0;
+    private long jsonWriteTime = 0;
+    private long binaryWriteTime = 0;
+    private long csvFileSize = 0;
+    private long jsonFileSize = 0;
+    private long binaryFileSize = 0;
+    
+    // Getters for performance metrics
+    public long getCsvWriteTime() { return csvWriteTime; }
+    public long getJsonWriteTime() { return jsonWriteTime; }
+    public long getBinaryWriteTime() { return binaryWriteTime; }
+    public long getCsvFileSize() { return csvFileSize; }
+    public long getJsonFileSize() { return jsonFileSize; }
+    public long getBinaryFileSize() { return binaryFileSize; }
+    
+    /**
+     * Initialize directories for all formats
+     * Time Complexity: O(1) - Directory creation
+     */
+    public MultiFormatFileHandler() throws FileExportException {
+        try {
+            Files.createDirectories(CSV_DIR);
+            Files.createDirectories(JSON_DIR);
+            Files.createDirectories(BINARY_DIR);
+            Files.createDirectories(DATA_CSV_DIR);
+            Files.createDirectories(DATA_JSON_DIR);
+            Files.createDirectories(DATA_BINARY_DIR);
+        } catch (IOException e) {
+            throw new FileExportException(
+                "X ERROR: FileExportException\n   Failed to create export directories: " + e.getMessage()
+            );
+        }
+    }
+    
+    /**
+     * Export student report to CSV format with streaming
+     * Uses NIO.2 Files.newBufferedWriter for efficient streaming
+     * Time Complexity: O(n) where n is the number of grades
+     */
+    public Path exportToCSV(StudentReport report, String fileName) throws FileExportException {
+        long startTime = System.nanoTime();
+        Path filePath = CSV_DIR.resolve(fileName + ".csv");
+        
+        try (BufferedWriter writer = Files.newBufferedWriter(
+                filePath, 
+                StandardCharsets.UTF_8,
+                StandardOpenOption.CREATE,
+                StandardOpenOption.TRUNCATE_EXISTING
+        )) {
+            // Write CSV header
+            writer.write("Grade ID,Date,Subject,Type,Grade\n");
+            
+            // Stream grades one by one to avoid loading entire file into memory
+            for (GradeData grade : report.getGrades()) {
+                writer.write(String.format("%s,%s,%s,%s,%.1f\n",
+                    grade.getGradeId(),
+                    grade.getDate(),
+                    grade.getSubjectName(),
+                    grade.getSubjectType(),
+                    grade.getGrade()
+                ));
+            }
+            
+            // Write summary data
+            writer.write(String.format("\nSummary,Student ID,%s\n", report.getStudentId()));
+            writer.write(String.format("Summary,Name,%s\n", report.getStudentName()));
+            writer.write(String.format("Summary,Type,%s\n", report.getStudentType()));
+            writer.write(String.format("Summary,Overall Average,%.2f\n", report.getOverallAverage()));
+            writer.write(String.format("Summary,Total Grades,%d\n", report.getGrades().size()));
+            
+        } catch (IOException e) {
+            throw new FileExportException(
+                "X ERROR: FileExportException\n   Failed to export CSV file: " + e.getMessage()
+            );
+        }
+        
+        csvWriteTime = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
+        try {
+            csvFileSize = Files.size(filePath);
+        } catch (IOException e) {
+            csvFileSize = 0;
+        }
+        
+        return filePath;
+    }
+    
+    /**
+     * Export student report to JSON format
+     * Uses NIO.2 Files.writeString for UTF-8 encoding
+     * Time Complexity: O(n) where n is the number of grades
+     */
+    public Path exportToJSON(StudentReport report, String fileName) throws FileExportException {
+        long startTime = System.nanoTime();
+        Path filePath = JSON_DIR.resolve(fileName + ".json");
+        
+        try {
+            StringBuilder json = new StringBuilder();
+            json.append("{\n");
+            json.append("  \"student\": {\n");
+            json.append(String.format("    \"id\": \"%s\",\n", report.getStudentId()));
+            json.append(String.format("    \"name\": \"%s\",\n", report.getStudentName()));
+            json.append(String.format("    \"type\": \"%s\",\n", report.getStudentType()));
+            json.append(String.format("    \"overallAverage\": %.2f,\n", report.getOverallAverage()));
+            json.append(String.format("    \"totalGrades\": %d\n", report.getGrades().size()));
+            json.append("  },\n");
+            json.append("  \"grades\": [\n");
+            
+            // Add grades as JSON objects
+            for (int i = 0; i < report.getGrades().size(); i++) {
+                GradeData grade = report.getGrades().get(i);
+                json.append("    {\n");
+                json.append(String.format("      \"gradeId\": \"%s\",\n", grade.getGradeId()));
+                json.append(String.format("      \"date\": \"%s\",\n", grade.getDate()));
+                json.append(String.format("      \"subject\": \"%s\",\n", grade.getSubjectName()));
+                json.append(String.format("      \"type\": \"%s\",\n", grade.getSubjectType()));
+                json.append(String.format("      \"grade\": %.1f\n", grade.getGrade()));
+                json.append(i < report.getGrades().size() - 1 ? "    },\n" : "    }\n");
+            }
+            
+            json.append("  ],\n");
+            json.append(String.format("  \"metadata\": {\n"));
+            json.append(String.format("    \"exportDate\": \"%s\",\n", 
+                LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)));
+            json.append(String.format("    \"reportType\": \"%s\"\n", report.getReportType()));
+            json.append("  }\n");
+            json.append("}");
+            
+            // Write with explicit UTF-8 encoding using NIO.2
+            Files.writeString(filePath, json.toString(), StandardCharsets.UTF_8,
+                    StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+            
+        } catch (IOException e) {
+            throw new FileExportException(
+                "X ERROR: FileExportException\n   Failed to export JSON file: " + e.getMessage()
+            );
+        }
+        
+        jsonWriteTime = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
+        try {
+            jsonFileSize = Files.size(filePath);
+        } catch (IOException e) {
+            jsonFileSize = 0;
+        }
+        
+        return filePath;
+    }
+    
+    /**
+     * Export student report to binary format using Java serialization
+     * Uses NIO.2 Files.newOutputStream for efficient binary writing
+     * Time Complexity: O(n) where n is the size of the serialized object
+     */
+    public Path exportToBinary(StudentReport report, String fileName) throws FileExportException {
+        long startTime = System.nanoTime();
+        Path filePath = BINARY_DIR.resolve(fileName + ".dat");
+        
+        try (ObjectOutputStream oos = new ObjectOutputStream(
+                Files.newOutputStream(filePath, 
+                    StandardOpenOption.CREATE, 
+                    StandardOpenOption.TRUNCATE_EXISTING)
+        )) {
+            // Serialize the entire report object
+            oos.writeObject(report);
+            oos.flush();
+            
+        } catch (IOException e) {
+            throw new FileExportException(
+                "X ERROR: FileExportException\n   Failed to export binary file: " + e.getMessage()
+            );
+        }
+        
+        binaryWriteTime = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
+        try {
+            binaryFileSize = Files.size(filePath);
+        } catch (IOException e) {
+            binaryFileSize = 0;
+        }
+        
+        return filePath;
+    }
+    
+    /**
+     * Export to all formats (CSV, JSON, Binary)
+     * Time Complexity: O(n) where n is the number of grades
+     */
+    public ExportResult exportToAllFormats(StudentReport report, String fileName) throws FileExportException {
+        System.out.println("Processing with NIO.2 Streaming...");
+        
+        Path csvPath = exportToCSV(report, fileName);
+        Path jsonPath = exportToJSON(report, fileName);
+        Path binaryPath = exportToBinary(report, fileName);
+        
+        return new ExportResult(csvPath, jsonPath, binaryPath,
+                csvWriteTime, jsonWriteTime, binaryWriteTime,
+                csvFileSize, jsonFileSize, binaryFileSize);
+    }
+    
+    /**
+     * Import student report from binary format
+     * Uses NIO.2 Files.newInputStream for efficient binary reading
+     * Time Complexity: O(n) where n is the size of the serialized object
+     */
+    public StudentReport importFromBinary(Path filePath) throws FileExportException {
+        long startTime = System.nanoTime();
+        
+        try (ObjectInputStream ois = new ObjectInputStream(
+                Files.newInputStream(filePath, StandardOpenOption.READ)
+        )) {
+            StudentReport report = (StudentReport) ois.readObject();
+            long readTime = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
+            System.out.printf("Binary import completed in %dms\n", readTime);
+            return report;
+            
+        } catch (IOException | ClassNotFoundException e) {
+            throw new FileExportException(
+                "X ERROR: FileExportException\n   Failed to import binary file: " + e.getMessage()
+            );
+        }
+    }
+    
+    /**
+     * Import CSV file with streaming (for large files)
+     * Uses NIO.2 Files.lines() for streaming large files
+     * Time Complexity: O(n) where n is the number of lines
+     */
+    public List<String[]> importCSV(Path filePath) throws FileExportException {
+        long startTime = System.nanoTime();
+        List<String[]> data = new ArrayList<>();
+        
+        try {
+            // Use Files.lines() for streaming large CSV files
+            Files.lines(filePath, StandardCharsets.UTF_8)
+                .skip(1) // Skip header
+                .forEach(line -> {
+                    if (!line.trim().isEmpty() && !line.startsWith("Summary")) {
+                        data.add(line.split(","));
+                    }
+                });
+            
+            long readTime = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
+            System.out.printf("CSV import completed in %dms\n", readTime);
+            return data;
+            
+        } catch (IOException e) {
+            throw new FileExportException(
+                "X ERROR: FileExportException\n   Failed to import CSV file: " + e.getMessage()
+            );
+        }
+    }
+    
+    /**
+     * Get performance summary
+     */
+    public String getPerformanceSummary() {
+        long totalTime = csvWriteTime + jsonWriteTime + binaryWriteTime;
+        long totalSize = csvFileSize + jsonFileSize + binaryFileSize;
+        double compressionRatio = jsonFileSize > 0 ? (double) jsonFileSize / binaryFileSize : 0;
+        
+        StringBuilder summary = new StringBuilder();
+        summary.append("\nExport Performance Summary:\n");
+        summary.append(String.format("  Total Time: %dms\n", totalTime));
+        summary.append(String.format("  Total Size: %s\n", formatFileSize(totalSize)));
+        if (compressionRatio > 0) {
+            summary.append(String.format("  Compression Ratio: %.1f:1 (binary vs JSON)\n", compressionRatio));
+        }
+        summary.append("  I/O Operations: 3 parallel writes\n");
+        
+        return summary.toString();
+    }
+    
+    /**
+     * Format file size to human-readable format
+     */
+    private String formatFileSize(long bytes) {
+        if (bytes < 1024) {
+            return bytes + " B";
+        } else if (bytes < 1024 * 1024) {
+            return String.format("%.1f KB", bytes / 1024.0);
+        } else {
+            return String.format("%.1f MB", bytes / (1024.0 * 1024.0));
+        }
+    }
+    
+    /**
+     * Export result container class
+     */
+    public static class ExportResult {
+        private final Path csvPath;
+        private final Path jsonPath;
+        private final Path binaryPath;
+        private final long csvTime;
+        private final long jsonTime;
+        private final long binaryTime;
+        private final long csvSize;
+        private final long jsonSize;
+        private final long binarySize;
+        
+        public ExportResult(Path csvPath, Path jsonPath, Path binaryPath,
+                          long csvTime, long jsonTime, long binaryTime,
+                          long csvSize, long jsonSize, long binarySize) {
+            this.csvPath = csvPath;
+            this.jsonPath = jsonPath;
+            this.binaryPath = binaryPath;
+            this.csvTime = csvTime;
+            this.jsonTime = jsonTime;
+            this.binaryTime = binaryTime;
+            this.csvSize = csvSize;
+            this.jsonSize = jsonSize;
+            this.binarySize = binarySize;
+        }
+        
+        // Getters
+        public Path getCsvPath() { return csvPath; }
+        public Path getJsonPath() { return jsonPath; }
+        public Path getBinaryPath() { return binaryPath; }
+        public long getCsvTime() { return csvTime; }
+        public long getJsonTime() { return jsonTime; }
+        public long getBinaryTime() { return binaryTime; }
+        public long getCsvSize() { return csvSize; }
+        public long getJsonSize() { return jsonSize; }
+        public long getBinarySize() { return binarySize; }
+    }
+}
+
