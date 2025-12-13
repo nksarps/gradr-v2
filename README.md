@@ -202,6 +202,8 @@ Thank you for using Student Grade Management System!
 Goodbye!
 ```
 
+> **Note:** For detailed information about collection optimizations and performance improvements, see [COLLECTION_OPTIMIZATIONS.md](COLLECTION_OPTIMIZATIONS.md).
+
 ## License
 This project is for educational purposes.
 
