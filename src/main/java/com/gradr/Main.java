@@ -19,6 +19,18 @@ public class Main {
 
         StudentManager studentManager = new StudentManager();
         GradeManager gradeManager = new GradeManager();
+        
+        // Task scheduler (initialized on first use)
+        // Use array to allow modification in shutdown hook
+        final TaskScheduler[] taskSchedulerRef = new TaskScheduler[1];
+        boolean schedulerInitialized = false;
+        
+        // Add shutdown hook to properly close scheduler
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            if (taskSchedulerRef[0] != null) {
+                taskSchedulerRef[0].shutdown();
+            }
+        }));
 
         int choice = 0;
         Student student = null;
@@ -1423,12 +1435,291 @@ public class Main {
                     System.out.println();
                     break;
                 case 15:
-                    System.out.println("SCHEDULE AUTOMATED TASKS [NEW]");
-                    System.out.println("_______________________________________________");
-                    System.out.println();
-                    System.out.println("This feature will allow scheduling automated tasks.");
-                    System.out.println("Implementation coming soon...");
-                    System.out.println();
+                    try {
+                        // Initialize scheduler (singleton pattern - create once)
+                        if (!schedulerInitialized) {
+                            taskSchedulerRef[0] = new TaskScheduler(studentManager, gradeManager);
+                            schedulerInitialized = true;
+                        }
+                        
+                        TaskScheduler taskScheduler = taskSchedulerRef[0];
+                        
+                        System.out.println("SCHEDULE AUTOMATED TASKS");
+                        System.out.println("_______________________________________________");
+                        System.out.println();
+                        
+                        // Display active tasks
+                        List<ScheduledTask> activeTasks = taskScheduler.getActiveTasks();
+                        System.out.println("Current Scheduled Tasks: " + activeTasks.size() + " active");
+                        System.out.println();
+                        
+                        if (!activeTasks.isEmpty()) {
+                            System.out.println("ACTIVE SCHEDULES");
+                            System.out.println("_______________________________________________");
+                            for (ScheduledTask task : activeTasks) {
+                                String scheduleLabel = "";
+                                switch (task.getScheduleType()) {
+                                    case DAILY: scheduleLabel = "[DAILY]"; break;
+                                    case HOURLY: scheduleLabel = "[HOURLY]"; break;
+                                    case WEEKLY: scheduleLabel = "[WEEKLY]"; break;
+                                }
+                                
+                                System.out.println(scheduleLabel + " " + task.getTaskName());
+                                System.out.println("  Schedule: " + task.getScheduleDescription());
+                                System.out.println("  Last Run: " + task.getFormattedLastRunTime());
+                                System.out.println("  Next Run: " + task.getFormattedNextRunTime());
+                                
+                                String statusSymbol = "";
+                                String statusText = "";
+                                switch (task.getLastStatus()) {
+                                    case SUCCESS:
+                                        statusSymbol = "✓";
+                                        statusText = "Success";
+                                        break;
+                                    case RUNNING:
+                                        statusSymbol = "⚡";
+                                        statusText = "Running";
+                                        break;
+                                    case FAILED:
+                                        statusSymbol = "✗";
+                                        statusText = "Failed";
+                                        break;
+                                    case PENDING:
+                                        statusSymbol = "○";
+                                        statusText = "Pending";
+                                        break;
+                                }
+                                System.out.println("  Status: " + statusSymbol + " " + statusText);
+                                if (task.getLastExecutionDuration() > 0) {
+                                    System.out.println("  Duration: " + task.getLastExecutionDuration() + "ms");
+                                }
+                                System.out.println();
+                            }
+                        }
+                        
+                        System.out.println("Add New Scheduled Task:");
+                        System.out.println("1. Daily GPA Recalculation");
+                        System.out.println("2. Hourly Statistics Cache Refresh");
+                        System.out.println("3. Weekly Batch Report Generation");
+                        System.out.println("4. Daily Database Backup");
+                        System.out.println("5. Custom Schedule");
+                        System.out.println("6. Cancel");
+                        System.out.println();
+                        
+                        System.out.print("Select task (1-6): ");
+                        int taskChoice;
+                        try {
+                            taskChoice = scanner.nextInt();
+                            scanner.nextLine();
+                        } catch (InputMismatchException e) {
+                            System.out.println("\nX ERROR: InvalidMenuChoiceException\n   Please enter a valid number (1-6).\n");
+                            scanner.nextLine();
+                            break;
+                        }
+                        
+                        if (taskChoice == 6) {
+                            break;
+                        }
+                        
+                        String taskName = "";
+                        ScheduledTask.ScheduleType scheduleType = null;
+                        int hour = 0;
+                        int minute = 0;
+                        int dayOfWeek = 1;
+                        
+                        switch (taskChoice) {
+                            case 1:
+                                taskName = "Daily GPA Recalculation";
+                                scheduleType = ScheduledTask.ScheduleType.DAILY;
+                                break;
+                            case 2:
+                                taskName = "Hourly Statistics Cache Refresh";
+                                scheduleType = ScheduledTask.ScheduleType.HOURLY;
+                                break;
+                            case 3:
+                                taskName = "Weekly Batch Report Generation";
+                                scheduleType = ScheduledTask.ScheduleType.WEEKLY;
+                                break;
+                            case 4:
+                                taskName = "Daily Database Backup";
+                                scheduleType = ScheduledTask.ScheduleType.DAILY;
+                                break;
+                            case 5:
+                                System.out.println("Custom schedules not yet implemented.");
+                                System.out.println();
+                                break;
+                            default:
+                                System.out.println("X ERROR: Invalid task choice\n");
+                                break;
+                        }
+                        
+                        if (taskName.isEmpty() || scheduleType == null) {
+                            break;
+                        }
+                        
+                        System.out.println();
+                        System.out.println("CONFIGURE: " + taskName);
+                        System.out.println("_______________________________________________");
+                        System.out.println();
+                        
+                        // Get execution time
+                        if (scheduleType == ScheduledTask.ScheduleType.HOURLY) {
+                            System.out.print("Enter minute (0-59): ");
+                            minute = scanner.nextInt();
+                            scanner.nextLine();
+                            hour = 0; // Not used for hourly
+                        } else {
+                            System.out.print("Enter hour (0-23): ");
+                            hour = scanner.nextInt();
+                            scanner.nextLine();
+                            System.out.print("Enter minute (0-59): ");
+                            minute = scanner.nextInt();
+                            scanner.nextLine();
+                            
+                            if (scheduleType == ScheduledTask.ScheduleType.WEEKLY) {
+                                System.out.println();
+                                System.out.println("Day of Week:");
+                                System.out.println("1. Monday");
+                                System.out.println("2. Tuesday");
+                                System.out.println("3. Wednesday");
+                                System.out.println("4. Thursday");
+                                System.out.println("5. Friday");
+                                System.out.println("6. Saturday");
+                                System.out.println("7. Sunday");
+                                System.out.println();
+                                System.out.print("Select day (1-7): ");
+                                dayOfWeek = scanner.nextInt();
+                                scanner.nextLine();
+                            }
+                        }
+                        
+                        System.out.println();
+                        
+                        // Get scope (for tasks that need it)
+                        String scope = "All Students";
+                        if (taskChoice == 1 || taskChoice == 3) {
+                            System.out.println("Target Students:");
+                            System.out.println("1. All Students");
+                            System.out.println("2. Honors Students Only");
+                            System.out.println("3. Students with Grade Changes");
+                            System.out.println();
+                            System.out.print("Select scope (1-3): ");
+                            int scopeChoice = scanner.nextInt();
+                            scanner.nextLine();
+                            
+                            switch (scopeChoice) {
+                                case 1: scope = "All Students"; break;
+                                case 2: scope = "Honors Students Only"; break;
+                                case 3: scope = "Students with Grade Changes"; break;
+                            }
+                        }
+                        
+                        System.out.println();
+                        
+                        // Get thread count (for parallel tasks)
+                        int threadCount = 1;
+                        if (taskChoice == 1 || taskChoice == 3) {
+                            int taskStudentCount = studentManager.getStudentCount();
+                            int recommended = Math.min(8, Math.max(2, taskStudentCount / 5));
+                            System.out.println("Recommended: " + recommended + " threads for " + taskStudentCount + " students.");
+                            System.out.print("Enter thread count (1-8): ");
+                            threadCount = scanner.nextInt();
+                            scanner.nextLine();
+                            if (threadCount < 1 || threadCount > 8) {
+                                threadCount = recommended;
+                            }
+                        }
+                        
+                        System.out.println();
+                        
+                        // Get notification settings
+                        System.out.println("Notification Settings:");
+                        System.out.println("1. Email summary on completion");
+                        System.out.println("2. Log to file only");
+                        System.out.println("3. Both");
+                        System.out.println();
+                        System.out.print("Select option (1-3): ");
+                        int notifChoice = scanner.nextInt();
+                        scanner.nextLine();
+                        
+                        boolean emailNotif = (notifChoice == 1 || notifChoice == 3);
+                        boolean logToFile = (notifChoice == 2 || notifChoice == 3);
+                        String notificationEmail = null;
+                        
+                        if (emailNotif) {
+                            System.out.print("Enter notification email: ");
+                            notificationEmail = scanner.nextLine();
+                            // Validate email
+                            try {
+                                ValidationUtils.validateEmail(notificationEmail);
+                            } catch (InvalidStudentDataException e) {
+                                System.out.println(e.getMessage());
+                                System.out.println();
+                                break;
+                            }
+                        }
+                        
+                        System.out.println();
+                        System.out.println("TASK CONFIGURATION SUMMARY");
+                        System.out.println("_______________________________________________");
+                        System.out.println("Task: " + taskName);
+                        System.out.println("Schedule: " + 
+                            (scheduleType == ScheduledTask.ScheduleType.DAILY ? "Every day at " + String.format("%02d:%02d", hour, minute) :
+                             scheduleType == ScheduledTask.ScheduleType.HOURLY ? "Every hour at :" + String.format("%02d", minute) :
+                             "Every " + new String[]{"", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"}[dayOfWeek] + " at " + String.format("%02d:%02d", hour, minute)));
+                        if (taskChoice == 1 || taskChoice == 3) {
+                            System.out.println("Scope: " + scope + " (" + 
+                                (scope.equals("All Students") ? studentManager.getStudentCount() : 
+                                 scope.equals("Honors Students Only") ? 
+                                    studentManager.getStudentsList().stream().filter(s -> s.getStudentType().equals("Honors")).count() : 
+                                    studentManager.getStudentCount()) + ")");
+                            System.out.println("Threads: " + threadCount + " (parallel execution)");
+                        }
+                        System.out.println("Notifications: " + 
+                            (emailNotif && logToFile ? "Email + Log file" :
+                             emailNotif ? "Email" : "Log file"));
+                        if (emailNotif) {
+                            System.out.println("Recipient: " + notificationEmail);
+                        }
+                        System.out.println();
+                        
+                        System.out.print("Confirm schedule? (Y/N): ");
+                        String confirm = scanner.nextLine().trim().toUpperCase();
+                        
+                        if (!confirm.equals("Y")) {
+                            System.out.println("Schedule cancelled.");
+                            System.out.println();
+                            break;
+                        }
+                        
+                        // Create and schedule task
+                        ScheduledTask task = new ScheduledTask(taskName, scheduleType, hour, minute);
+                        if (scheduleType == ScheduledTask.ScheduleType.WEEKLY) {
+                            task.setDayOfWeek(dayOfWeek);
+                        }
+                        task.setScope(scope);
+                        task.setThreadCount(threadCount);
+                        task.setNotificationEmail(notificationEmail);
+                        task.setEmailNotification(emailNotif);
+                        task.setLogToFile(logToFile);
+                        
+                        ScheduledTask scheduled = taskScheduler.scheduleTask(task);
+                        
+                        System.out.println();
+                        System.out.println("✓ Task scheduled successfully!");
+                        System.out.println("Task ID: " + scheduled.getTaskId());
+                        System.out.println("Scheduler Thread: " + taskScheduler.getSchedulerStatus());
+                        System.out.println("Next Execution: " + scheduled.getFormattedNextRunTime());
+                        System.out.println("Initial Delay: " + scheduled.getCountdown());
+                        System.out.println();
+                        System.out.println("The task will run automatically in the background.");
+                        System.out.println();
+                        
+                    } catch (Exception e) {
+                        System.out.println();
+                        System.out.println("X ERROR: " + e.getClass().getSimpleName() + "\n   " + e.getMessage());
+                        System.out.println();
+                    }
                     break;
                 case 16:
                     System.out.println("VIEW SYSTEM PERFORMANCE [NEW]");
