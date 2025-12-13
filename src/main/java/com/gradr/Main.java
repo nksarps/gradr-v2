@@ -902,12 +902,64 @@ public class Main {
 
                     break;
                 case 10:
-                    System.out.println("REAL-TIME STATISTICS DASHBOARD [NEW]");
-                    System.out.println("_______________________________________________");
-                    System.out.println();
-                    System.out.println("This feature will provide real-time statistics dashboard.");
-                    System.out.println("Implementation coming soon...");
-                    System.out.println();
+                    try {
+                        StatisticsDashboard dashboard = new StatisticsDashboard(studentManager, gradeManager);
+                        dashboard.start();
+                        
+                        System.out.println("Dashboard started. Commands: Q=Quit, R=Refresh, P=Pause/Resume");
+                        System.out.println("Type command and press Enter.");
+                        System.out.println();
+                        Thread.sleep(500); // Brief pause to show message
+                        
+                        // Simplified approach: single-threaded with blocking input
+                        // This avoids any thread synchronization issues
+                        boolean shouldQuit = false;
+                        
+                        // Display initial dashboard
+                        dashboard.displayDashboard();
+                        
+                        while (!shouldQuit && dashboard.isRunning()) {
+                            // Show prompt and wait for input (this blocks)
+                            System.out.print("Command (Q/R/P): ");
+                            System.out.flush(); // Ensure prompt is visible
+                            
+                            // Read input (blocks until user types something)
+                            String input = scanner.nextLine().trim().toUpperCase();
+                            
+                            // Process command
+                            if (input.equals("Q")) {
+                                shouldQuit = true;
+                                break;
+                            } else if (input.equals("R")) {
+                                dashboard.refresh();
+                                dashboard.displayDashboard();
+                            } else if (input.equals("P")) {
+                                if (dashboard.isPaused()) {
+                                    dashboard.resume();
+                                } else {
+                                    dashboard.pause();
+                                }
+                                dashboard.displayDashboard();
+                            } else if (!input.isEmpty()) {
+                                System.out.println("Unknown command. Use Q, R, or P.");
+                                System.out.println();
+                            }
+                            
+                            // If not quitting, continue to next iteration (will show prompt again)
+                        }
+                        
+                        // Cleanup
+                        dashboard.stop();
+                        
+                        System.out.println();
+                        System.out.println("Dashboard closed.");
+                        System.out.println();
+                        
+                    } catch (Exception e) {
+                        System.out.println();
+                        System.out.println("X ERROR: " + e.getClass().getSimpleName() + "\n   " + e.getMessage());
+                        System.out.println();
+                    }
                     break;
                 case 11:
                     try {
