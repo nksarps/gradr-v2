@@ -1,22 +1,59 @@
 package com.gradr;
 
-class GradeManager {
-    private Grade[] grades = new Grade[200];
-    private int gradeCount;
+import java.util.*;
 
+/**
+ * GradeManager - Optimized with multiple collection types for efficient operations
+ * 
+ * Collection Optimizations:
+ * - LinkedList<Grade>: O(1) for frequent insertions/deletions in grade history
+ * - HashSet<String>: O(1) average case for tracking unique courses enrolled
+ * - TreeMap<Double, List<Student>>: O(log n) for sorted GPA rankings
+ * - PriorityQueue<Task>: O(log n) for task scheduling based on priority
+ */
+class GradeManager {
+    // LinkedList for grade history - optimized for frequent insertions/deletions
+    // Time Complexity: O(1) for add/remove at ends, O(n) for search
+    private List<Grade> gradeHistory = new LinkedList<>();
+    
+    // HashSet for tracking unique courses enrolled across all students
+    // Time Complexity: O(1) average case for add, contains, remove operations
+    private Set<String> uniqueCourses = new HashSet<>();
+    
+    // TreeMap for sorted GPA rankings (GPA -> List of Students with that GPA)
+    // Time Complexity: O(log n) for put, get, remove operations
+    // Automatically maintains sorted order by GPA
+    private Map<Double, List<Student>> gpaRankings = new TreeMap<>(Collections.reverseOrder());
+    
+    // PriorityQueue for task scheduling based on priority
+    // Time Complexity: O(log n) for offer/poll operations, O(1) for peek
+    private Queue<Task> taskQueue = new PriorityQueue<>();
+
+    /**
+     * Add grade to LinkedList (maintains insertion order)
+     * Time Complexity: O(1) - LinkedList add operation
+     * Also tracks unique courses in HashSet
+     */
     public void addGrade(Grade grade){
-        grades[gradeCount] = grade;
-        gradeCount++;
+        // O(1) - LinkedList add operation
+        gradeHistory.add(grade);
+        
+        // O(1) average case - HashSet add operation for unique course tracking
+        String courseKey = grade.getSubject().getSubjectName() + " (" + grade.getSubject().getSubjectType() + ")";
+        uniqueCourses.add(courseKey);
     }
 
+    /**
+     * View grades by student ID
+     * Time Complexity: O(n) where n is the number of grades (must iterate through all)
+     */
     public String viewGradesByStudent(String studentId) {
         StringBuilder sb = new StringBuilder();
         boolean found = false;
         int totalCourses = 0;
 
-        for (Grade grade : grades) {
-            if (grade == null) continue;
-
+        // O(n) - Iterate through all grades in LinkedList
+        for (Grade grade : gradeHistory) {
             if (grade.getStudentId().equals(studentId)) {
                 totalCourses++;
 
@@ -53,13 +90,16 @@ class GradeManager {
     }
 
 
+    /**
+     * Calculate core subject average for a student
+     * Time Complexity: O(n) where n is the number of grades
+     */
     public double calculateCoreAverage(String studentId) {
         double gradeSum = 0;
         int totalCourses = 0;
 
-        for (Grade grade : grades) {
-            if (grade == null) continue;
-
+        // O(n) - Iterate through all grades
+        for (Grade grade : gradeHistory) {
             if (grade.getStudentId().equals(studentId)) {
                 if (grade.getSubject().getSubjectType().equals("Core")) {
                     gradeSum += grade.getGrade();
@@ -68,20 +108,20 @@ class GradeManager {
             }
         }
 
-        // To prevent the method from throwing an error by dividing by 0
-        // if there are no core subjects
         if (totalCourses == 0) return 0.0;
-
         return gradeSum / totalCourses;
     }
 
+    /**
+     * Calculate elective subject average for a student
+     * Time Complexity: O(n) where n is the number of grades
+     */
     public double calculateElectiveAverage(String studentId) {
         double gradeSum = 0;
         int totalCourses = 0;
 
-        for (Grade grade : grades) {
-            if (grade == null) continue;
-
+        // O(n) - Iterate through all grades
+        for (Grade grade : gradeHistory) {
             if (grade.getStudentId().equals(studentId)) {
                 if (grade.getSubject().getSubjectType().equals("Elective")) {
                     gradeSum += grade.getGrade();
@@ -90,56 +130,162 @@ class GradeManager {
             }
         }
 
-        // To prevent the method from throwing an error by dividing by 0
-        // if there are no elective subjects
         if (totalCourses == 0) return 0.0;
-
         return gradeSum / totalCourses;
     }
 
+    /**
+     * Calculate overall average for a student
+     * Time Complexity: O(n) where n is the number of grades
+     */
     public double calculateOverallAverage(String studentId) {
         double gradeSum = 0;
         int totalCourses = 0;
 
-        for (Grade grade : grades) {
-            // To prevent an error if the grades array is empty
-            if (grade == null) continue;
-
+        // O(n) - Iterate through all grades
+        for (Grade grade : gradeHistory) {
             if (grade.getStudentId().equals(studentId)) {
                 gradeSum += grade.getGrade();
                 totalCourses++;
             }
         }
 
-        // To prevent the method from throwing an error by dividing by 0
-        // if there are no subjects
         if (totalCourses == 0) return 0.0;
-
         return gradeSum / totalCourses;
     }
 
+    /**
+     * Get total grade count
+     * Time Complexity: O(1) - LinkedList size operation
+     */
     public int getGradeCount() {
-        return gradeCount;
+        return gradeHistory.size();
     }
 
+    /**
+     * Get all grades as array (for backward compatibility)
+     * Time Complexity: O(n) where n is the number of grades
+     */
     public Grade[] getGrades() {
-        return grades;
+        return gradeHistory.toArray(new Grade[0]);
+    }
+    
+    /**
+     * Get all grades as list
+     * Time Complexity: O(1) - Returns reference to list
+     */
+    public List<Grade> getGradeHistory() {
+        return new LinkedList<>(gradeHistory); // Return copy to prevent external modification
     }
 
-    // Getting the number of enrolled subjects for students
-    // This is to be used in the Student class where we display the
-    // number of enrolled subjects in the students table
+    /**
+     * Get number of enrolled subjects for a student
+     * Time Complexity: O(n) where n is the number of grades
+     */
     public int getEnrolledSubjectsCount(String studentId) {
         int subjectCount = 0;
 
-        for (Grade grade : grades) {
-            if (grade == null) continue;
-
+        // O(n) - Iterate through all grades
+        for (Grade grade : gradeHistory) {
             if (grade.getStudentId().equals(studentId)) {
                 subjectCount++;
             }
         }
 
         return subjectCount;
+    }
+    
+    /**
+     * Get unique courses enrolled across all students
+     * Time Complexity: O(1) - Returns reference to set
+     * @return Set of unique course names
+     */
+    public Set<String> getUniqueCourses() {
+        return new HashSet<>(uniqueCourses); // Return copy to prevent external modification
+    }
+    
+    /**
+     * Update GPA rankings in TreeMap
+     * Time Complexity: O(log n) where n is the number of unique GPA values
+     * @param student The student to add/update in rankings
+     * @param gpa The student's GPA
+     */
+    public void updateGPARanking(Student student, double gpa) {
+        // Remove student from old GPA entry if exists
+        for (List<Student> students : gpaRankings.values()) {
+            students.remove(student);
+        }
+        
+        // Add student to new GPA entry
+        // O(log n) - TreeMap put operation
+        gpaRankings.computeIfAbsent(gpa, k -> new ArrayList<>()).add(student);
+    }
+    
+    /**
+     * Get sorted GPA rankings
+     * Time Complexity: O(1) - Returns reference to map
+     * @return TreeMap with GPA as key (sorted in descending order) and list of students as value
+     */
+    public Map<Double, List<Student>> getGPARankings() {
+        return new TreeMap<>(gpaRankings); // Return copy to prevent external modification
+    }
+    
+    /**
+     * Remove grade from history (for grade corrections/deletions)
+     * Time Complexity: O(n) - Must search LinkedList to find grade
+     * @param grade The grade to remove
+     * @return true if grade was removed, false otherwise
+     */
+    public boolean removeGrade(Grade grade) {
+        // O(n) - LinkedList remove operation (must find element first)
+        return gradeHistory.remove(grade);
+    }
+    
+    /**
+     * Add task to priority queue
+     * Time Complexity: O(log n) where n is the number of tasks in queue
+     * @param task The task to add
+     */
+    public void scheduleTask(Task task) {
+        // O(log n) - PriorityQueue offer operation
+        taskQueue.offer(task);
+    }
+    
+    /**
+     * Get and remove the highest priority task
+     * Time Complexity: O(log n) where n is the number of tasks in queue
+     * @return The highest priority task, or null if queue is empty
+     */
+    public Task processNextTask() {
+        // O(log n) - PriorityQueue poll operation
+        return taskQueue.poll();
+    }
+    
+    /**
+     * Peek at the highest priority task without removing it
+     * Time Complexity: O(1) - PriorityQueue peek operation
+     * @return The highest priority task, or null if queue is empty
+     */
+    public Task peekNextTask() {
+        // O(1) - PriorityQueue peek operation
+        return taskQueue.peek();
+    }
+    
+    /**
+     * Get the number of pending tasks
+     * Time Complexity: O(1) - Queue size operation
+     * @return Number of tasks in queue
+     */
+    public int getPendingTaskCount() {
+        return taskQueue.size();
+    }
+    
+    /**
+     * Check if there are pending tasks
+     * Time Complexity: O(1) - Queue isEmpty operation
+     * @return true if there are pending tasks, false otherwise
+     */
+    public boolean hasPendingTasks() {
+        return !taskQueue.isEmpty();
     }
 }
