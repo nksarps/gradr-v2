@@ -1,20 +1,31 @@
 package com.gradr;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * GradeManager - Optimized with multiple collection types for efficient operations
  * 
  * Collection Optimizations:
  * - LinkedList<Grade>: O(1) for frequent insertions/deletions in grade history
+ * - TreeMap<String, List<Grade>>: O(log n) for organizing grades by subject name
  * - HashSet<String>: O(1) average case for tracking unique courses enrolled
  * - TreeMap<Double, List<Student>>: O(log n) for sorted GPA rankings
  * - PriorityQueue<Task>: O(log n) for task scheduling based on priority
+ * - ConcurrentHashMap<String, Statistics>: O(1) thread-safe statistics cache
+ * - ConcurrentLinkedQueue<AuditEntry>: Thread-safe, non-blocking audit logging
  */
 class GradeManager {
     // LinkedList for grade history - optimized for frequent insertions/deletions
     // Time Complexity: O(1) for add/remove at ends, O(n) for search
+    // Maintains chronological order per student
     private List<Grade> gradeHistory = new LinkedList<>();
+    
+    // TreeMap for organizing grades by subject name
+    // Time Complexity: O(log n) for put, get, remove operations
+    // Automatically sorted by subject name, used for subject-wise reports
+    private Map<String, List<Grade>> subjectGrades = new TreeMap<>();
     
     // HashSet for tracking unique courses enrolled across all students
     // Time Complexity: O(1) average case for add, contains, remove operations
@@ -22,25 +33,48 @@ class GradeManager {
     
     // TreeMap for sorted GPA rankings (GPA -> List of Students with that GPA)
     // Time Complexity: O(log n) for put, get, remove operations
-    // Automatically maintains sorted order by GPA
+    // Automatically maintains sorted order by GPA (descending)
     private Map<Double, List<Student>> gpaRankings = new TreeMap<>(Collections.reverseOrder());
     
     // PriorityQueue for task scheduling based on priority
     // Time Complexity: O(log n) for offer/poll operations, O(1) for peek
+    // Tasks ordered by priority and scheduled time
     private Queue<Task> taskQueue = new PriorityQueue<>();
+    
+    // ConcurrentHashMap for thread-safe statistics cache
+    // Time Complexity: O(1) average case for concurrent access
+    // No blocking during read operations, thread-safe statistics caching
+    private Map<String, Statistics> statsCache = new ConcurrentHashMap<>();
+    
+    // ConcurrentLinkedQueue for thread-safe, non-blocking audit logging
+    // Allows multiple threads to add entries simultaneously
+    // Background thread drains entries to file
+    private Queue<AuditEntry> auditLog = new ConcurrentLinkedQueue<>();
 
     /**
      * Add grade to LinkedList (maintains insertion order)
-     * Time Complexity: O(1) - LinkedList add operation
-     * Also tracks unique courses in HashSet
+     * Time Complexity: O(1) - LinkedList add + O(log n) - TreeMap put
+     * Also tracks unique courses in HashSet and organizes by subject in TreeMap
      */
     public void addGrade(Grade grade){
-        // O(1) - LinkedList add operation
+        // O(1) - LinkedList add operation (maintains chronological order)
         gradeHistory.add(grade);
+        
+        // O(log n) - TreeMap put operation (organize by subject name)
+        String subjectName = grade.getSubject().getSubjectName();
+        subjectGrades.computeIfAbsent(subjectName, k -> new ArrayList<>()).add(grade);
         
         // O(1) average case - HashSet add operation for unique course tracking
         String courseKey = grade.getSubject().getSubjectName() + " (" + grade.getSubject().getSubjectType() + ")";
         uniqueCourses.add(courseKey);
+        
+        // Invalidate statistics cache when new grade is added
+        statsCache.clear();
+        
+        // Add audit entry (non-blocking)
+        auditLog.offer(new AuditEntry(AuditEntry.AuditAction.GRADE_RECORDED, 
+            "SYSTEM", grade.getStudentId(), 
+            String.format("Grade %s recorded for %s", grade.getGradeId(), subjectName)));
     }
 
     /**
@@ -232,13 +266,35 @@ class GradeManager {
     
     /**
      * Remove grade from history (for grade corrections/deletions)
-     * Time Complexity: O(n) - Must search LinkedList to find grade
+     * Time Complexity: O(n) - Must search LinkedList to find grade + O(log n) for TreeMap removal
      * @param grade The grade to remove
      * @return true if grade was removed, false otherwise
      */
     public boolean removeGrade(Grade grade) {
         // O(n) - LinkedList remove operation (must find element first)
-        return gradeHistory.remove(grade);
+        boolean removed = gradeHistory.remove(grade);
+        
+        if (removed) {
+            // O(log n) - Remove from subjectGrades TreeMap
+            String subjectName = grade.getSubject().getSubjectName();
+            List<Grade> subjectGradeList = subjectGrades.get(subjectName);
+            if (subjectGradeList != null) {
+                subjectGradeList.remove(grade);
+                if (subjectGradeList.isEmpty()) {
+                    subjectGrades.remove(subjectName);
+                }
+            }
+            
+            // Invalidate statistics cache
+            statsCache.clear();
+            
+            // Add audit entry
+            auditLog.offer(new AuditEntry(AuditEntry.AuditAction.GRADE_DELETED, 
+                "SYSTEM", grade.getStudentId(), 
+                String.format("Grade %s deleted", grade.getGradeId())));
+        }
+        
+        return removed;
     }
     
     /**
@@ -287,5 +343,88 @@ class GradeManager {
      */
     public boolean hasPendingTasks() {
         return !taskQueue.isEmpty();
+    }
+    
+    /**
+     * Get grades organized by subject name
+     * Time Complexity: O(1) - Returns reference to map
+     * @return TreeMap with subject name as key and list of grades as value
+     */
+    public Map<String, List<Grade>> getSubjectGrades() {
+        return new TreeMap<>(subjectGrades); // Return copy to prevent external modification
+    }
+    
+    /**
+     * Get grades for a specific subject
+     * Time Complexity: O(log n) - TreeMap get operation
+     * @param subjectName The name of the subject
+     * @return List of grades for the subject, or empty list if not found
+     */
+    public List<Grade> getGradesBySubject(String subjectName) {
+        List<Grade> grades = subjectGrades.get(subjectName);
+        return grades != null ? new ArrayList<>(grades) : new ArrayList<>();
+    }
+    
+    /**
+     * Get or compute statistics with caching
+     * Time Complexity: O(1) average case if cached, O(n) if needs computation
+     * @param cacheKey Key for the statistics cache
+     * @param calculator Function to compute statistics if not cached
+     * @return Statistics object
+     */
+    public Statistics getStatistics(String cacheKey, java.util.function.Supplier<Statistics> calculator) {
+        // O(1) - ConcurrentHashMap get operation (thread-safe, no blocking)
+        Statistics stats = statsCache.get(cacheKey);
+        
+        if (stats == null || stats.isExpired(5)) { // 5 minute cache timeout
+            // Compute statistics
+            stats = calculator.get();
+            // O(1) - ConcurrentHashMap put operation (thread-safe)
+            statsCache.put(cacheKey, stats);
+        }
+        
+        return stats;
+    }
+    
+    /**
+     * Clear statistics cache
+     * Time Complexity: O(1) - ConcurrentHashMap clear operation
+     */
+    public void clearStatisticsCache() {
+        statsCache.clear();
+    }
+    
+    /**
+     * Add audit entry to log (non-blocking)
+     * Time Complexity: O(1) - ConcurrentLinkedQueue offer operation
+     * @param entry The audit entry to add
+     */
+    public void addAuditEntry(AuditEntry entry) {
+        // O(1) - ConcurrentLinkedQueue offer (non-blocking, thread-safe)
+        auditLog.offer(entry);
+    }
+    
+    /**
+     * Get all audit entries (for processing by background thread)
+     * Time Complexity: O(n) where n is the number of entries
+     * @return List of audit entries
+     */
+    public List<AuditEntry> drainAuditLog() {
+        List<AuditEntry> entries = new ArrayList<>();
+        AuditEntry entry;
+        // Drain queue (non-blocking)
+        while ((entry = auditLog.poll()) != null) {
+            entries.add(entry);
+        }
+        return entries;
+    }
+    
+    /**
+     * Get current audit log size
+     * Time Complexity: O(1) - Queue size operation
+     * @return Number of pending audit entries
+     */
+    public int getAuditLogSize() {
+        return auditLog.size();
     }
 }
