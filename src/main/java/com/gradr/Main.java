@@ -48,55 +48,64 @@ public class Main {
             switch (choice) {
                 case 1:
                     try{
-                        System.out.println("ADD STUDENT");
+                        System.out.println("ADD STUDENT (with validation)");
                         System.out.println("_______________________________________________");
                         System.out.println();
 
-                        System.out.print("Enter student name: ");
-                        String name = scanner.nextLine();
-
-                        System.out.print("Enter student age: ");
-                        String ageInput = scanner.nextLine();
-                        
-                        // Validate age format and range
-                        int age;
-                        try {
-                            age = Integer.parseInt(ageInput);
-                            // Age should be between 5 and 100 (reasonable student age range)
-                            if (age < 5 || age > 100) {
-                                throw new InvalidStudentDataException(
-                                        "X ERROR: InvalidStudentDataException\n   Age must be between 5 and 100.\n   You entered: " + ageInput
-                                );
+                        // Validate student name using ValidationUtils
+                        String name;
+                        ValidationUtils.ValidationResult nameResult;
+                        do {
+                            System.out.print("Enter Student Name: ");
+                            name = scanner.nextLine();
+                            nameResult = ValidationUtils.validateName(name);
+                            System.out.println(nameResult.getMessage());
+                            if (!nameResult.isValid()) {
+                                System.out.println();
                             }
-                        } catch (NumberFormatException e) { // if the user entered a non-number age
-                            throw new InvalidStudentDataException(
-                                    "X ERROR: InvalidStudentDataException\n   Age must be a valid number.\n   You entered: " + ageInput
-                            );
-                        }
+                        } while (!nameResult.isValid());
 
-                        System.out.print("Enter student email: ");
-                        String email = scanner.nextLine();
+                        // Validate age using ValidationUtils
+                        String ageInput;
+                        ValidationUtils.ValidationResult ageResult;
+                        do {
+                            System.out.print("Enter Student Age: ");
+                            ageInput = scanner.nextLine();
+                            ageResult = ValidationUtils.validateAge(ageInput);
+                            System.out.println(ageResult.getMessage());
+                            if (!ageResult.isValid()) {
+                                System.out.println();
+                            }
+                        } while (!ageResult.isValid());
                         
-                        // Validate email format using regex
-                        // Pattern: allows letters, numbers, dots, hyphens, underscores before @, 
-                        // then domain with letters, numbers, dots, and hyphens
-                        String emailRegex = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$";
-                        if (!email.matches(emailRegex)) {
-                            throw new InvalidStudentDataException(
-                                    "X ERROR: InvalidStudentDataException\n   Email format is invalid.\n   Expected format: example@domain.com\n   You entered: " + email
-                            );
-                        }
+                        int age = Integer.parseInt(ageInput);
 
-                        System.out.print("Enter student phone: ");
-                        String phone = scanner.nextLine();
+                        // Validate email using ValidationUtils
+                        String email;
+                        ValidationUtils.ValidationResult emailResult;
+                        do {
+                            System.out.print("Enter Email Address: ");
+                            email = scanner.nextLine();
+                            emailResult = ValidationUtils.validateEmail(email);
+                            System.out.println(emailResult.getMessage());
+                            if (!emailResult.isValid()) {
+                                System.out.println();
+                            }
+                        } while (!emailResult.isValid());
+
+                        // Validate phone using ValidationUtils
+                        String phone;
+                        ValidationUtils.ValidationResult phoneResult;
+                        do {
+                            System.out.print("Enter Phone Number: ");
+                            phone = scanner.nextLine();
+                            phoneResult = ValidationUtils.validatePhone(phone);
+                            System.out.println(phoneResult.getMessage());
+                            if (!phoneResult.isValid()) {
+                                System.out.println();
+                            }
+                        } while (!phoneResult.isValid());
                         
-                        // Validate phone format using regex
-                        String phoneRegex = "^(\\+?\\d{1,3}[-.\\s]?)?\\(?\\d{3}\\)?[-.\\s]?\\d{3}[-.\\s]?\\d{4}$";
-                        if (!phone.matches(phoneRegex)) {
-                            throw new InvalidStudentDataException(
-                                    "X ERROR: InvalidStudentDataException\n   Phone number format is invalid.\n   Expected formats: (123) 456-7890, 123-456-7890, 1234567890, etc.\n   You entered: " + phone
-                            );
-                        }
                         System.out.println();
 
                         System.out.println("Student type:");
@@ -127,12 +136,14 @@ public class Main {
                         student.setGradeManager(gradeManager);
 
                         System.out.println("Student added successfully!");
-
+                        System.out.println("All inputs validated with regex patterns");
+                        System.out.println();
                         System.out.printf("Student ID: %s\n", student.getStudentId());
                         System.out.printf("Name: %s\n", student.getName());
                         System.out.printf("Type: %s\n", student.getStudentType());
                         System.out.printf("Age: %d\n", student.getAge());
                         System.out.printf("Email: %s\n", student.getEmail());
+                        System.out.printf("Phone: %s\n", student.getPhone());
                         System.out.printf("Passing Grade: %d%%\n", (int) student.getPassingGrade());
 
                         if (student.getStudentType().equals("Honors")) {
@@ -149,9 +160,6 @@ public class Main {
                         scanner.nextLine(); // Clear invalid input
                         System.out.println();
                     } catch (InvalidMenuChoiceException e) {
-                        System.out.println(e.getMessage());
-                        System.out.println();
-                    } catch (InvalidStudentDataException e) {
                         System.out.println(e.getMessage());
                         System.out.println();
                     }
@@ -317,19 +325,21 @@ public class Main {
 
                         System.out.println();
 
-                        System.out.print("Enter grade (0-100): ");
+                        // Validate grade using ValidationUtils
+                        String gradeInputStr;
+                        ValidationUtils.ValidationResult gradeResult;
                         int gradeInput = 0;
-
-                        try {
-                            gradeInput = scanner.nextInt();
-                            scanner.nextLine();
-                        } catch (InputMismatchException e) {
-                            System.out.println(
-                                    "\nX ERROR: InvalidGradeException\n   Please enter a valid number (0-100).\n"
-                            );
-                            scanner.nextLine();
-                            break;
-                        }
+                        do {
+                            System.out.print("Enter grade (0-100): ");
+                            gradeInputStr = scanner.nextLine();
+                            gradeResult = ValidationUtils.validateGrade(gradeInputStr);
+                            System.out.println(gradeResult.getMessage());
+                            if (!gradeResult.isValid()) {
+                                System.out.println();
+                            } else {
+                                gradeInput = Integer.parseInt(gradeInputStr);
+                            }
+                        } while (!gradeResult.isValid());
 
                         grade = new Grade(studentId, subject, gradeInput);
 

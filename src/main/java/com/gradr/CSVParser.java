@@ -70,17 +70,19 @@ public class CSVParser {
     }
 
     /**
-     * Validates a single grade entry using ValidationUtils
-     * Uses compiled regex patterns for validation
+     * Validates a single grade entry using compiled regex patterns
      * @param data Array containing [StudentID, SubjectName, SubjectType, Grade]
      * @return true if data is valid, false otherwise
      */
     public boolean validateGradeEntry(String[] data) {
         if (data.length != 4) return false;
 
-        // Validate student ID format using ValidationUtils (STUxxx)
-        ValidationUtils.ValidationResult studentIdResult = ValidationUtils.validateStudentId(data[0]);
-        if (!studentIdResult.isValid()) return false;
+        // Validate student ID format using compiled pattern
+        try {
+            ValidationUtils.validateStudentId(data[0]);
+        } catch (com.gradr.exceptions.InvalidStudentDataException e) {
+            return false;
+        }
 
         // Validate subject type
         String subjectType = data[2];
@@ -104,9 +106,12 @@ public class CSVParser {
             }
         }
 
-        // Validate grade using ValidationUtils (must be a number between 0 and 100)
-        ValidationUtils.ValidationResult gradeResult = ValidationUtils.validateGrade(data[3]);
-        if (!gradeResult.isValid()) return false;
+        // Validate grade using compiled pattern
+        try {
+            ValidationUtils.validateGrade(data[3]);
+        } catch (com.gradr.exceptions.InvalidStudentDataException e) {
+            return false;
+        }
 
         return true;
     }
