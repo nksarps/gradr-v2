@@ -1830,12 +1830,197 @@ public class Main {
                     }
                     break;
                 case 14:
-                    System.out.println("QUERY GRADE HISTORY [NEW]");
-                    System.out.println("_______________________________________________");
-                    System.out.println();
-                    System.out.println("This feature will allow querying grade history with filters.");
-                    System.out.println("Implementation coming soon...");
-                    System.out.println();
+                    try {
+                        System.out.println("QUERY GRADE HISTORY");
+                        System.out.println("_______________________________________________");
+                        System.out.println();
+                        
+                        if (gradeManager.getGradeCount() == 0) {
+                            System.out.println("No grades recorded yet. Query unavailable.");
+                            System.out.println();
+                            break;
+                        }
+                        
+                        System.out.println("Query Options:");
+                        System.out.println("1. Filter by Student ID");
+                        System.out.println("2. Filter by Subject Name");
+                        System.out.println("3. Filter by Subject Type (Core/Elective)");
+                        System.out.println("4. Filter by Grade Range");
+                        System.out.println("5. Filter by Date Range");
+                        System.out.println("6. Combined Filters (Advanced)");
+                        System.out.println("7. View All Grades");
+                        System.out.println("8. Return to Main Menu");
+                        System.out.println();
+                        
+                        System.out.print("Select option (1-8): ");
+                        int queryOption;
+                        try {
+                            queryOption = scanner.nextInt();
+                            scanner.nextLine();
+                        } catch (InputMismatchException e) {
+                            System.out.println("\nX ERROR: InvalidMenuChoiceException\n   Please enter a valid number (1-8).\n");
+                            scanner.nextLine();
+                            break;
+                        }
+                        
+                        System.out.println();
+                        
+                        if (queryOption == 8) {
+                            break;
+                        }
+                        
+                        List<Grade> queryResults = null;
+                        boolean queryExecuted = false;
+                        
+                        switch (queryOption) {
+                            case 1:
+                                // Filter by Student ID
+                                System.out.print("Enter Student ID: ");
+                                String queryStudentId = scanner.nextLine().trim();
+                                System.out.println();
+                                
+                                if (queryStudentId.isEmpty()) {
+                                    System.out.println("X ERROR: Student ID cannot be empty\n");
+                                    break;
+                                }
+                                
+                                queryResults = queryGradesByStudentId(gradeManager, queryStudentId);
+                                queryExecuted = true;
+                                break;
+                                
+                            case 2:
+                                // Filter by Subject Name
+                                System.out.print("Enter Subject Name (or leave empty for all): ");
+                                String subjectName = scanner.nextLine().trim();
+                                System.out.println();
+                                
+                                queryResults = queryGradesBySubjectName(gradeManager, subjectName);
+                                queryExecuted = true;
+                                break;
+                                
+                            case 3:
+                                // Filter by Subject Type
+                                System.out.println("Subject Type:");
+                                System.out.println("1. Core");
+                                System.out.println("2. Elective");
+                                System.out.println("3. Both");
+                                System.out.print("Select type (1-3): ");
+                                int typeChoice;
+                                try {
+                                    typeChoice = scanner.nextInt();
+                                    scanner.nextLine();
+                                } catch (InputMismatchException e) {
+                                    System.out.println("\nX ERROR: InvalidMenuChoiceException\n   Please enter a valid number (1-3).\n");
+                                    scanner.nextLine();
+                                    break;
+                                }
+                                
+                                System.out.println();
+                                
+                                if (typeChoice < 1 || typeChoice > 3) {
+                                    System.out.println("X ERROR: InvalidMenuChoiceException\n   Please select a valid option (1-3).\n");
+                                    break;
+                                }
+                                
+                                String subjectType = "";
+                                if (typeChoice == 1) {
+                                    subjectType = "Core";
+                                } else if (typeChoice == 2) {
+                                    subjectType = "Elective";
+                                }
+                                // typeChoice == 3 means "Both", so subjectType remains empty
+                                
+                                queryResults = queryGradesBySubjectType(gradeManager, subjectType);
+                                queryExecuted = true;
+                                break;
+                                
+                            case 4:
+                                // Filter by Grade Range
+                                System.out.print("Enter minimum grade (0-100, or leave empty for 0): ");
+                                String minGradeInput = scanner.nextLine().trim();
+                                System.out.print("Enter maximum grade (0-100, or leave empty for 100): ");
+                                String maxGradeInput = scanner.nextLine().trim();
+                                System.out.println();
+                                
+                                try {
+                                    double minGrade = minGradeInput.isEmpty() ? 0.0 : Double.parseDouble(minGradeInput);
+                                    double maxGrade = maxGradeInput.isEmpty() ? 100.0 : Double.parseDouble(maxGradeInput);
+                                    
+                                    if (minGrade < 0 || maxGrade > 100 || minGrade > maxGrade) {
+                                        System.out.println("X ERROR: Invalid grade range\n   Minimum: 0-100, Maximum: 0-100, Min <= Max\n");
+                                        break;
+                                    }
+                                    
+                                    queryResults = queryGradesByRange(gradeManager, minGrade, maxGrade);
+                                    queryExecuted = true;
+                                } catch (NumberFormatException e) {
+                                    System.out.println("X ERROR: InvalidNumberFormatException\n   Please enter valid numbers for grade range.\n");
+                                    break;
+                                }
+                                break;
+                                
+                            case 5:
+                                // Filter by Date Range
+                                System.out.println("Date format: YYYY-MM-DD");
+                                System.out.print("Enter start date (or leave empty for no start limit): ");
+                                String startDate = scanner.nextLine().trim();
+                                System.out.print("Enter end date (or leave empty for no end limit): ");
+                                String endDate = scanner.nextLine().trim();
+                                System.out.println();
+                                
+                                queryResults = queryGradesByDateRange(gradeManager, startDate, endDate);
+                                queryExecuted = true;
+                                break;
+                                
+                            case 6:
+                                // Combined Filters
+                                try {
+                                    queryResults = queryGradesWithCombinedFilters(gradeManager, scanner, studentManager);
+                                    queryExecuted = true;
+                                } catch (NumberFormatException e) {
+                                    System.out.println("X ERROR: InvalidNumberFormatException\n   Please enter valid numbers for grade range.\n");
+                                    break;
+                                }
+                                break;
+                                
+                            case 7:
+                                // View All Grades
+                                List<Grade> allGrades = gradeManager.getGradeHistory();
+                                queryResults = new ArrayList<>(allGrades);
+                                queryExecuted = true;
+                                
+                                // Debug: Show total grades available
+                                if (allGrades.isEmpty() && gradeManager.getGradeCount() > 0) {
+                                    System.out.println("⚠ Warning: getGradeHistory() returned empty but getGradeCount() = " + gradeManager.getGradeCount());
+                                    System.out.println("   This may indicate a synchronization issue.");
+                                    System.out.println();
+                                }
+                                break;
+                                
+                            default:
+                                System.out.println("X ERROR: InvalidMenuChoiceException\n   Please select a valid option (1-8).\n");
+                                break;
+                        }
+                        
+                        // Display results only if query was executed
+                        if (queryExecuted && queryResults != null) {
+                            if (!queryResults.isEmpty()) {
+                                displayQueryResults(queryResults, studentManager);
+                            } else {
+                                System.out.println("No grades found matching the query criteria.");
+                                System.out.println();
+                            }
+                        }
+                        
+                    } catch (NumberFormatException e) {
+                        System.out.println();
+                        System.out.println("X ERROR: InvalidNumberFormatException\n   Please enter valid numbers for grade/date ranges.\n");
+                        System.out.println();
+                    } catch (Exception e) {
+                        System.out.println();
+                        System.out.println("X ERROR: " + e.getClass().getSimpleName() + "\n   " + e.getMessage());
+                        System.out.println();
+                    }
                     break;
                 case 15:
                     try {
@@ -2662,6 +2847,245 @@ public class Main {
         }
         
         return importedCount;
+    }
+    
+    /**
+     * Query grades by Student ID
+     */
+    private static List<Grade> queryGradesByStudentId(GradeManager gradeManager, String studentId) {
+        List<Grade> results = new ArrayList<>();
+        for (Grade grade : gradeManager.getGradeHistory()) {
+            if (grade.getStudentId().equalsIgnoreCase(studentId)) {
+                results.add(grade);
+            }
+        }
+        return results;
+    }
+    
+    /**
+     * Query grades by Subject Name
+     */
+    private static List<Grade> queryGradesBySubjectName(GradeManager gradeManager, String subjectName) {
+        List<Grade> results = new ArrayList<>();
+        List<Grade> allGrades = gradeManager.getGradeHistory();
+        
+        if (subjectName.isEmpty()) {
+            return new ArrayList<>(allGrades);
+        }
+        
+        for (Grade grade : allGrades) {
+            if (grade != null && grade.getSubject() != null && 
+                grade.getSubject().getSubjectName() != null &&
+                grade.getSubject().getSubjectName().equalsIgnoreCase(subjectName)) {
+                results.add(grade);
+            }
+        }
+        return results;
+    }
+    
+    /**
+     * Query grades by Subject Type
+     */
+    private static List<Grade> queryGradesBySubjectType(GradeManager gradeManager, String subjectType) {
+        List<Grade> results = new ArrayList<>();
+        List<Grade> allGrades = gradeManager.getGradeHistory();
+        
+        if (subjectType.isEmpty()) {
+            // Return all grades (for "Both" option)
+            return new ArrayList<>(allGrades);
+        }
+        
+        for (Grade grade : allGrades) {
+            if (grade != null && grade.getSubject() != null && 
+                grade.getSubject().getSubjectType() != null &&
+                grade.getSubject().getSubjectType().equalsIgnoreCase(subjectType)) {
+                results.add(grade);
+            }
+        }
+        return results;
+    }
+    
+    /**
+     * Query grades by Grade Range
+     */
+    private static List<Grade> queryGradesByRange(GradeManager gradeManager, double minGrade, double maxGrade) {
+        List<Grade> results = new ArrayList<>();
+        List<Grade> allGrades = gradeManager.getGradeHistory();
+        
+        for (Grade grade : allGrades) {
+            if (grade != null && grade.getGrade() >= minGrade && grade.getGrade() <= maxGrade) {
+                results.add(grade);
+            }
+        }
+        return results;
+    }
+    
+    /**
+     * Query grades by Date Range
+     */
+    private static List<Grade> queryGradesByDateRange(GradeManager gradeManager, String startDate, String endDate) {
+        List<Grade> results = new ArrayList<>();
+        List<Grade> allGrades = gradeManager.getGradeHistory();
+        
+        for (Grade grade : allGrades) {
+            if (grade == null || grade.getDate() == null) {
+                continue;
+            }
+            
+            String gradeDate = grade.getDate();
+            boolean matches = true;
+            
+            if (!startDate.isEmpty() && gradeDate.compareTo(startDate) < 0) {
+                matches = false;
+            }
+            if (!endDate.isEmpty() && gradeDate.compareTo(endDate) > 0) {
+                matches = false;
+            }
+            
+            if (matches) {
+                results.add(grade);
+            }
+        }
+        return results;
+    }
+    
+    /**
+     * Query grades with combined filters
+     */
+    private static List<Grade> queryGradesWithCombinedFilters(GradeManager gradeManager, Scanner scanner, StudentManager studentManager) {
+        System.out.println("Combined Filters (leave empty to skip filter):");
+        System.out.println();
+        
+        System.out.print("Student ID: ");
+        String filterStudentId = scanner.nextLine().trim();
+        
+        System.out.print("Subject Name: ");
+        String filterSubjectName = scanner.nextLine().trim();
+        
+        System.out.print("Subject Type (Core/Elective): ");
+        String filterSubjectType = scanner.nextLine().trim();
+        
+        System.out.print("Minimum Grade (0-100): ");
+        String minGradeStr = scanner.nextLine().trim();
+        double minGrade = minGradeStr.isEmpty() ? 0.0 : Double.parseDouble(minGradeStr);
+        
+        System.out.print("Maximum Grade (0-100): ");
+        String maxGradeStr = scanner.nextLine().trim();
+        double maxGrade = maxGradeStr.isEmpty() ? 100.0 : Double.parseDouble(maxGradeStr);
+        
+        System.out.print("Start Date (YYYY-MM-DD): ");
+        String filterStartDate = scanner.nextLine().trim();
+        
+        System.out.print("End Date (YYYY-MM-DD): ");
+        String filterEndDate = scanner.nextLine().trim();
+        
+        System.out.println();
+        
+        List<Grade> results = new ArrayList<>();
+        
+        for (Grade grade : gradeManager.getGradeHistory()) {
+            boolean matches = true;
+            
+            // Student ID filter
+            if (!filterStudentId.isEmpty() && !grade.getStudentId().equalsIgnoreCase(filterStudentId)) {
+                matches = false;
+            }
+            
+            // Subject Name filter
+            if (!filterSubjectName.isEmpty() && !grade.getSubject().getSubjectName().equalsIgnoreCase(filterSubjectName)) {
+                matches = false;
+            }
+            
+            // Subject Type filter
+            if (!filterSubjectType.isEmpty() && !grade.getSubject().getSubjectType().equalsIgnoreCase(filterSubjectType)) {
+                matches = false;
+            }
+            
+            // Grade Range filter
+            if (grade.getGrade() < minGrade || grade.getGrade() > maxGrade) {
+                matches = false;
+            }
+            
+            // Date Range filter
+            String gradeDate = grade.getDate();
+            if (!filterStartDate.isEmpty() && gradeDate.compareTo(filterStartDate) < 0) {
+                matches = false;
+            }
+            if (!filterEndDate.isEmpty() && gradeDate.compareTo(filterEndDate) > 0) {
+                matches = false;
+            }
+            
+            if (matches) {
+                results.add(grade);
+            }
+        }
+        
+        return results;
+    }
+    
+    /**
+     * Display query results with statistics
+     */
+    private static void displayQueryResults(List<Grade> results, StudentManager studentManager) {
+        System.out.println("QUERY RESULTS");
+        System.out.println("_______________________________________________");
+        System.out.println();
+        
+        System.out.printf("%-9s | %-12s | %-20s | %-10s | %-16s | %-10s | %-6s%n", 
+            "GRD ID", "STUDENT ID", "STUDENT NAME", "SUBJECT", "SUBJECT TYPE", "DATE", "GRADE");
+        System.out.println("_______________________________________________");
+        
+        double totalGrade = 0.0;
+        Map<String, Integer> subjectCount = new HashMap<>();
+        Map<String, Integer> studentCount = new HashMap<>();
+        
+        for (Grade grade : results) {
+            String studentName = "Unknown";
+            try {
+                Student student = studentManager.findStudent(grade.getStudentId());
+                studentName = student.getName();
+            } catch (Exception e) {
+                // Student not found, use "Unknown"
+            }
+            
+            System.out.printf("%-9s | %-12s | %-20s | %-10s | %-16s | %-10s | %-6.1f%%%n",
+                grade.getGradeId(),
+                grade.getStudentId(),
+                studentName.length() > 20 ? studentName.substring(0, 17) + "..." : studentName,
+                grade.getSubject().getSubjectName().length() > 10 ? grade.getSubject().getSubjectName().substring(0, 7) + "..." : grade.getSubject().getSubjectName(),
+                grade.getSubject().getSubjectType(),
+                grade.getDate(),
+                grade.getGrade());
+            
+            totalGrade += grade.getGrade();
+            subjectCount.put(grade.getSubject().getSubjectName(), 
+                subjectCount.getOrDefault(grade.getSubject().getSubjectName(), 0) + 1);
+            studentCount.put(grade.getStudentId(), 
+                studentCount.getOrDefault(grade.getStudentId(), 0) + 1);
+        }
+        
+        System.out.println("_______________________________________________");
+        System.out.println();
+        
+        // Statistics
+        System.out.println("Statistics:");
+        System.out.println("  Total Grades: " + results.size());
+        if (results.size() > 0) {
+            System.out.printf("  Average Grade: %.2f%%%n", totalGrade / results.size());
+            System.out.println("  Unique Students: " + studentCount.size());
+            System.out.println("  Unique Subjects: " + subjectCount.size());
+            
+            // Top subjects
+            if (!subjectCount.isEmpty()) {
+                System.out.println();
+                System.out.println("  Top Subjects:");
+                subjectCount.entrySet().stream()
+                    .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+                    .limit(5)
+                    .forEach(entry -> System.out.printf("    - %s: %d grades%n", entry.getKey(), entry.getValue()));
+            }
+        }
+        System.out.println();
     }
 
     // Class for displaying the Main Menu
