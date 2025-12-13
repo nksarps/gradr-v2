@@ -5,4 +5,3 @@ public class InvalidStudentDataException extends Exception {
         super(message);
     }
 }
-
