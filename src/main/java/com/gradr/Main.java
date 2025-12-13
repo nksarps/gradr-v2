@@ -21,16 +21,23 @@ public class Main {
         StudentManager studentManager = new StudentManager();
         GradeManager gradeManager = new GradeManager();
         
+        // Cache manager (initialized on startup)
+        CacheManager cacheManager = new CacheManager();
+        
+        // Cache warming on startup
+        cacheManager.warmCache(studentManager, gradeManager);
+        
         // Task scheduler (initialized on first use)
         // Use array to allow modification in shutdown hook
         final TaskScheduler[] taskSchedulerRef = new TaskScheduler[1];
         boolean schedulerInitialized = false;
         
-        // Add shutdown hook to properly close scheduler
+        // Add shutdown hook to properly close scheduler and cache
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             if (taskSchedulerRef[0] != null) {
                 taskSchedulerRef[0].shutdown();
             }
+            cacheManager.shutdown();
         }));
 
         int choice = 0;
@@ -1874,12 +1881,153 @@ public class Main {
                     System.out.println();
                     break;
                 case 17:
-                    System.out.println("CACHE MANAGEMENT [NEW]");
-                    System.out.println("_______________________________________________");
-                    System.out.println();
-                    System.out.println("This feature will manage system cache.");
-                    System.out.println("Implementation coming soon...");
-                    System.out.println();
+                    try {
+                        System.out.println("CACHE MANAGEMENT");
+                        System.out.println("_______________________________________________");
+                        System.out.println();
+                        
+                        System.out.println("Cache Options:");
+                        System.out.println("1. View Cache Statistics");
+                        System.out.println("2. View Cache Contents");
+                        System.out.println("3. Clear Cache");
+                        System.out.println("4. Invalidate by Type");
+                        System.out.println("5. Return to Main Menu");
+                        System.out.println();
+                        
+                        System.out.print("Select option (1-5): ");
+                        int cacheOption;
+                        try {
+                            cacheOption = scanner.nextInt();
+                            scanner.nextLine();
+                        } catch (InputMismatchException e) {
+                            System.out.println("\nX ERROR: InvalidMenuChoiceException\n   Please enter a valid number (1-5).\n");
+                            scanner.nextLine();
+                            break;
+                        }
+                        
+                        System.out.println();
+                        
+                        switch (cacheOption) {
+                            case 1:
+                                // Display cache statistics
+                                CacheManager.CacheStatistics stats = cacheManager.getStatistics();
+                                
+                                System.out.println("CACHE STATISTICS");
+                                System.out.println("_______________________________________________");
+                                System.out.println("Hit Rate: " + String.format("%.2f", stats.getHitRate()) + "%");
+                                System.out.println("Miss Rate: " + String.format("%.2f", stats.getMissRate()) + "%");
+                                System.out.println("Total Hits: " + stats.getTotalHits());
+                                System.out.println("Total Misses: " + stats.getTotalMisses());
+                                System.out.println("Average Hit Time: " + stats.getAverageHitTime() + " ms");
+                                System.out.println("Average Miss Time: " + stats.getAverageMissTime() + " ms");
+                                System.out.println("Total Entries: " + stats.getTotalEntries() + " / " + 150);
+                                System.out.println("Memory Usage: ~" + (stats.getMemoryUsage() / 1024) + " KB");
+                                System.out.println("Eviction Count: " + stats.getEvictionCount());
+                                System.out.println();
+                                break;
+                                
+                            case 2:
+                                // Display cache contents
+                                List<Map<String, Object>> contents = cacheManager.getCacheContents();
+                                
+                                System.out.println("CACHE CONTENTS (" + contents.size() + " entries)");
+                                System.out.println("_______________________________________________");
+                                System.out.println();
+                                
+                                if (contents.isEmpty()) {
+                                    System.out.println("Cache is empty.");
+                                    System.out.println();
+                                } else {
+                                    System.out.printf("%-30s | %-15s | %-20s | %-20s | %-10s\n", 
+                                        "Key", "Type", "Created", "Last Accessed", "Accesses");
+                                    System.out.println("_______________________________________________");
+                                    
+                                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                                    for (Map<String, Object> entry : contents) {
+                                        String key = (String) entry.get("key");
+                                        String type = (String) entry.get("type");
+                                        LocalDateTime createdAt = (LocalDateTime) entry.get("createdAt");
+                                        LocalDateTime lastAccessed = (LocalDateTime) entry.get("lastAccessed");
+                                        int accessCount = (Integer) entry.get("accessCount");
+                                        
+                                        // Truncate key if too long
+                                        if (key.length() > 28) {
+                                            key = key.substring(0, 25) + "...";
+                                        }
+                                        
+                                        System.out.printf("%-30s | %-15s | %-20s | %-20s | %-10d\n",
+                                            key, type, 
+                                            createdAt.format(formatter),
+                                            lastAccessed.format(formatter),
+                                            accessCount);
+                                    }
+                                    System.out.println();
+                                }
+                                break;
+                                
+                            case 3:
+                                // Clear cache
+                                System.out.print("Are you sure you want to clear the cache? (Y/N): ");
+                                String confirm = scanner.nextLine().trim().toUpperCase();
+                                if (confirm.equals("Y")) {
+                                    cacheManager.clear();
+                                    System.out.println("Cache cleared successfully.");
+                                    System.out.println();
+                                } else {
+                                    System.out.println("Cache clear cancelled.");
+                                    System.out.println();
+                                }
+                                break;
+                                
+                            case 4:
+                                // Invalidate by type
+                                System.out.println("Invalidate Cache by Type:");
+                                System.out.println("1. Student Cache");
+                                System.out.println("2. Grade Report Cache");
+                                System.out.println("3. Statistics Cache");
+                                System.out.println();
+                                System.out.print("Select type (1-3): ");
+                                int typeChoice;
+                                try {
+                                    typeChoice = scanner.nextInt();
+                                    scanner.nextLine();
+                                } catch (InputMismatchException e) {
+                                    System.out.println("\nX ERROR: InvalidMenuChoiceException\n   Please enter a valid number (1-3).\n");
+                                    scanner.nextLine();
+                                    break;
+                                }
+                                
+                                CacheManager.CacheType typeToInvalidate = null;
+                                switch (typeChoice) {
+                                    case 1: typeToInvalidate = CacheManager.CacheType.STUDENT; break;
+                                    case 2: typeToInvalidate = CacheManager.CacheType.GRADE_REPORT; break;
+                                    case 3: typeToInvalidate = CacheManager.CacheType.STATISTICS; break;
+                                    default:
+                                        System.out.println("X ERROR: Invalid type choice\n");
+                                        break;
+                                }
+                                
+                                if (typeToInvalidate != null) {
+                                    cacheManager.invalidateByType(typeToInvalidate);
+                                    System.out.println("Cache entries of type " + typeToInvalidate.name() + " invalidated.");
+                                    System.out.println();
+                                }
+                                break;
+                                
+                            case 5:
+                                // Return to main menu
+                                break;
+                                
+                            default:
+                                System.out.println("X ERROR: Invalid option\n");
+                                break;
+                        }
+                        
+                    } catch (Exception e) {
+                        System.out.println();
+                        System.out.println("X ERROR: " + e.getClass().getSimpleName() + "\n   " + e.getMessage());
+                        System.out.println();
+                    }
                     break;
                 case 18:
                     System.out.println("AUDIT TRAIL VIEWER [NEW]");
