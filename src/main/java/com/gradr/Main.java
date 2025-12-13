@@ -21,6 +21,9 @@ public class Main {
         StudentManager studentManager = new StudentManager();
         GradeManager gradeManager = new GradeManager();
         
+        // Audit logger (initialized on startup)
+        AuditLogger auditLogger = new AuditLogger();
+        
         // Cache manager (initialized on startup)
         CacheManager cacheManager = new CacheManager();
         
@@ -32,12 +35,13 @@ public class Main {
         final TaskScheduler[] taskSchedulerRef = new TaskScheduler[1];
         boolean schedulerInitialized = false;
         
-        // Add shutdown hook to properly close scheduler and cache
+        // Add shutdown hook to properly close scheduler, cache, and audit logger
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             if (taskSchedulerRef[0] != null) {
                 taskSchedulerRef[0].shutdown();
             }
             cacheManager.shutdown();
+            auditLogger.shutdown();
         }));
 
         int choice = 0;
@@ -2030,12 +2034,211 @@ public class Main {
                     }
                     break;
                 case 18:
-                    System.out.println("AUDIT TRAIL VIEWER [NEW]");
-                    System.out.println("_______________________________________________");
-                    System.out.println();
-                    System.out.println("This feature will display audit trail logs.");
-                    System.out.println("Implementation coming soon...");
-                    System.out.println();
+                    try {
+                        System.out.println("AUDIT TRAIL VIEWER");
+                        System.out.println("_______________________________________________");
+                        System.out.println();
+                        
+                        AuditTrailViewer viewer = new AuditTrailViewer(auditLogger);
+                        
+                        System.out.println("Audit Trail Options:");
+                        System.out.println("1. View Recent Entries");
+                        System.out.println("2. Search by Date Range");
+                        System.out.println("3. Search by Operation Type");
+                        System.out.println("4. Search by Thread ID");
+                        System.out.println("5. View Statistics");
+                        System.out.println("6. Return to Main Menu");
+                        System.out.println();
+                        
+                        System.out.print("Select option (1-6): ");
+                        int auditOption;
+                        try {
+                            auditOption = scanner.nextInt();
+                            scanner.nextLine();
+                        } catch (InputMismatchException e) {
+                            System.out.println("\nX ERROR: InvalidMenuChoiceException\n   Please enter a valid number (1-6).\n");
+                            scanner.nextLine();
+                            break;
+                        }
+                        
+                        System.out.println();
+                        
+                        switch (auditOption) {
+                            case 1:
+                                // View recent entries
+                                System.out.print("Enter number of entries to display (default 50): ");
+                                String countInput = scanner.nextLine().trim();
+                                int count = countInput.isEmpty() ? 50 : Integer.parseInt(countInput);
+                                
+                                List<AuditLogger.EnhancedAuditEntry> recent = viewer.getRecentEntries(count);
+                                
+                                System.out.println("RECENT AUDIT ENTRIES (" + recent.size() + " entries)");
+                                System.out.println("_______________________________________________");
+                                System.out.println();
+                                
+                                if (recent.isEmpty()) {
+                                    System.out.println("No audit entries found.");
+                                    System.out.println();
+                                } else {
+                                    System.out.printf("%-20s | %-8s | %-20s | %-30s | %-8s | %-10s\n",
+                                        "Timestamp", "Thread", "Operation Type", "User Action", "Time(ms)", "Status");
+                                    System.out.println("_______________________________________________");
+                                    
+                                    DateTimeFormatter displayFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                                    for (AuditLogger.EnhancedAuditEntry entry : recent) {
+                                        LocalDateTime time = LocalDateTime.parse(
+                                            entry.getTimestamp(), DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+                                        
+                                        System.out.printf("%-20s | %-8d | %-20s | %-30s | %-8d | %-10s\n",
+                                            time.format(displayFormatter),
+                                            entry.getThreadId(),
+                                            entry.getOperationType(),
+                                            entry.getUserAction().length() > 28 ? 
+                                                entry.getUserAction().substring(0, 25) + "..." : entry.getUserAction(),
+                                            entry.getExecutionTime(),
+                                            entry.isSuccess() ? "SUCCESS" : "FAILED");
+                                    }
+                                    System.out.println();
+                                }
+                                break;
+                                
+                            case 2:
+                                // Search by date range
+                                System.out.print("Enter start date (yyyy-MM-dd): ");
+                                String startDateStr = scanner.nextLine().trim();
+                                System.out.print("Enter end date (yyyy-MM-dd): ");
+                                String endDateStr = scanner.nextLine().trim();
+                                
+                                try {
+                                    LocalDateTime startDate = LocalDateTime.parse(startDateStr + "T00:00:00");
+                                    LocalDateTime endDate = LocalDateTime.parse(endDateStr + "T23:59:59");
+                                    
+                                    List<AuditLogger.EnhancedAuditEntry> dateEntries = 
+                                        auditLogger.readAuditEntries(startDate, endDate);
+                                    
+                                    System.out.println("SEARCH RESULTS (" + dateEntries.size() + " entries)");
+                                    System.out.println("_______________________________________________");
+                                    System.out.println();
+                                    
+                                    if (dateEntries.isEmpty()) {
+                                        System.out.println("No entries found for the specified date range.");
+                                        System.out.println();
+                                    } else {
+                                        // Display first 50 entries
+                                        for (int i = 0; i < Math.min(50, dateEntries.size()); i++) {
+                                            AuditLogger.EnhancedAuditEntry entry = dateEntries.get(i);
+                                            System.out.println(entry.getTimestamp() + " | " + 
+                                                entry.getOperationType() + " | " + 
+                                                entry.getUserAction() + " | " +
+                                                (entry.isSuccess() ? "SUCCESS" : "FAILED"));
+                                        }
+                                        if (dateEntries.size() > 50) {
+                                            System.out.println("... and " + (dateEntries.size() - 50) + " more entries");
+                                        }
+                                        System.out.println();
+                                    }
+                                } catch (Exception e) {
+                                    System.out.println("X ERROR: Invalid date format. Use yyyy-MM-dd");
+                                    System.out.println();
+                                }
+                                break;
+                                
+                            case 3:
+                                // Search by operation type
+                                System.out.print("Enter operation type: ");
+                                String opType = scanner.nextLine().trim();
+                                
+                                LocalDateTime endDate = LocalDateTime.now();
+                                LocalDateTime startDate = endDate.minusDays(30);
+                                List<AuditLogger.EnhancedAuditEntry> allEntries = 
+                                    auditLogger.readAuditEntries(startDate, endDate);
+                                
+                                List<AuditLogger.EnhancedAuditEntry> filtered = 
+                                    viewer.filterByOperationType(allEntries, opType);
+                                
+                                System.out.println("SEARCH RESULTS (" + filtered.size() + " entries)");
+                                System.out.println("_______________________________________________");
+                                System.out.println();
+                                
+                                for (AuditLogger.EnhancedAuditEntry entry : filtered) {
+                                    System.out.println(entry.getTimestamp() + " | " + 
+                                        entry.getUserAction() + " | " +
+                                        entry.getExecutionTime() + "ms | " +
+                                        (entry.isSuccess() ? "SUCCESS" : "FAILED"));
+                                }
+                                System.out.println();
+                                break;
+                                
+                            case 4:
+                                // Search by thread ID
+                                System.out.print("Enter thread ID: ");
+                                try {
+                                    long threadId = Long.parseLong(scanner.nextLine().trim());
+                                    
+                                    LocalDateTime endDate2 = LocalDateTime.now();
+                                    LocalDateTime startDate2 = endDate2.minusDays(30);
+                                    List<AuditLogger.EnhancedAuditEntry> allEntries2 = 
+                                        auditLogger.readAuditEntries(startDate2, endDate2);
+                                    
+                                    List<AuditLogger.EnhancedAuditEntry> filtered2 = 
+                                        viewer.filterByThreadId(allEntries2, threadId);
+                                    
+                                    System.out.println("SEARCH RESULTS (" + filtered2.size() + " entries)");
+                                    System.out.println("_______________________________________________");
+                                    System.out.println();
+                                    
+                                    for (AuditLogger.EnhancedAuditEntry entry : filtered2) {
+                                        System.out.println(entry.getTimestamp() + " | " + 
+                                            entry.getOperationType() + " | " +
+                                            entry.getUserAction() + " | " +
+                                            entry.getExecutionTime() + "ms");
+                                    }
+                                    System.out.println();
+                                } catch (NumberFormatException e) {
+                                    System.out.println("X ERROR: Invalid thread ID");
+                                    System.out.println();
+                                }
+                                break;
+                                
+                            case 5:
+                                // View statistics
+                                LocalDateTime endDate3 = LocalDateTime.now();
+                                LocalDateTime startDate3 = endDate3.minusDays(7);
+                                List<AuditLogger.EnhancedAuditEntry> statsEntries = 
+                                    auditLogger.readAuditEntries(startDate3, endDate3);
+                                
+                                AuditTrailViewer.AuditStatistics stats = 
+                                    viewer.calculateStatistics(statsEntries);
+                                
+                                System.out.println("AUDIT STATISTICS (Last 7 Days)");
+                                System.out.println("_______________________________________________");
+                                System.out.println("Total Operations: " + stats.getTotalOperations());
+                                System.out.println("Successful: " + stats.getSuccessfulOperations() + 
+                                    " (" + String.format("%.2f", stats.getSuccessRate()) + "%)");
+                                System.out.println("Failed: " + stats.getFailedOperations());
+                                System.out.println("Average Execution Time: " + 
+                                    String.format("%.2f", stats.getAvgExecutionTime()) + " ms");
+                                System.out.println("Min Execution Time: " + stats.getMinExecutionTime() + " ms");
+                                System.out.println("Max Execution Time: " + stats.getMaxExecutionTime() + " ms");
+                                System.out.println("Average Operations Per Hour: " + 
+                                    String.format("%.2f", stats.getAvgOperationsPerHour()));
+                                System.out.println();
+                                break;
+                                
+                            case 6:
+                                // Return to main menu
+                                break;
+                                
+                            default:
+                                System.out.println("X ERROR: Invalid option\n");
+                                break;
+                        }
+                        
+                    } catch (Exception e) {
+                        System.out.println();
+                        System.out.println("X ERROR: " + e.getClass().getSimpleName() + "\n   " + e.getMessage());
+                        System.out.println();
+                    }
                     break;
                 case 19:
                     System.out.println("Thank you for using Student Grade Management System!");
