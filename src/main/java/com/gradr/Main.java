@@ -903,7 +903,7 @@ public class Main {
                                     minGrade = scanner.nextInt();
                                     scanner.nextLine();
                                 } catch (InputMismatchException e) {
-                                    System.out.println("\nX ERROR: InvalidMenuChoiceException\n   Please enter a valid number.\n");
+                                    System.out.println("\nX ERROR: InvalidGradeException\n   Please enter a valid grade.\n");
                                     scanner.nextLine();
                                     break;
                                 }
@@ -915,7 +915,7 @@ public class Main {
                                     scanner.nextLine();
                                     System.out.println();
                                 } catch (InputMismatchException e) {
-                                    System.out.println("\nX ERROR: InvalidMenuChoiceException\n   Please enter a valid number.\n");
+                                    System.out.println("\nX ERROR: InvalidGradeException\n   Please enter a valid grade.\n");
                                     scanner.nextLine();
                                     break;
                                 }
@@ -980,7 +980,7 @@ public class Main {
                                     searchType = "Honors";
                                 } else {
                                     throw new InvalidMenuChoiceException(
-                                            "X ERROR: InvalidMenuChoiceException\n   Please select a valid option (1-2).\n   You entered: " + typeChoice
+                                            "X ERROR: InvalidMenuChoiceException\n   Please select a valid option (1-2).\n"
                                     );
                                 }
 
@@ -1015,7 +1015,7 @@ public class Main {
                                     System.out.println();
                                 }
                             }
-                        } else {// Throw a custom input menu choice exception here
+                        } else {
                             throw new InvalidMenuChoiceException(
                                     "X ERROR: InvalidMenuChoiceException\n   Please select a valid option (1-4).\n   You entered: " + searchOption
                             );
