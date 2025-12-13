@@ -3,9 +3,7 @@ package com.gradr;
 import com.gradr.exceptions.*;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -466,7 +464,7 @@ public class Main {
 
                     break;
                 case 5:
-                    System.out.println("EXPORT GRADE REPORT");
+                    System.out.println("EXPORT GRADE REPORT (Multi-Format)");
                     System.out.println("_______________________________________________");
                     System.out.println();
 
@@ -477,126 +475,179 @@ public class Main {
                     try {
                         student = studentManager.findStudent(studentId);
 
-                        System.out.printf("Student: %s - %s\n", student.getStudentId(), student.getName());
-                        System.out.printf("Type: %s Student\n", student.getStudentType());
-                        // getEnrolledSubjectsCount() returns the number of subjects the student has grades in
+                        System.out.printf("Student: %s - %s", student.getStudentId(), student.getName());
+                        if (student.getEmail() != null) {
+                            System.out.printf(" (%s)", student.getEmail());
+                        }
+                        System.out.println();
+                        System.out.printf("Type: %s Student", student.getStudentType());
+                        if (student.getPhone() != null) {
+                            System.out.printf(" | Phone: %s", student.getPhone());
+                        }
+                        System.out.println();
                         System.out.printf("Total Grades: %d\n", student.getEnrolledSubjectsCount());
                         System.out.println();
 
-                        System.out.println("Export options:");
-                        System.out.println("1. Summary Report (overview only)");
-                        System.out.println("2. Detailed Report (all grades)");
-                        System.out.println("3. Both");
+                        System.out.println("Export Format:");
+                        System.out.println("1. CSV (Comma-Separated Values)");
+                        System.out.println("2. JSON (JavaScript Object Notation)");
+                        System.out.println("3. Binary (Serialized Java Object)");
+                        System.out.println("4. All formats");
                         System.out.println();
 
-                        System.out.print("Select option (1-3): ");
-                        int exportOption;
-
+                        System.out.print("Select format (1-4): ");
+                        int formatChoice;
                         try {
-                            exportOption = scanner.nextInt();
+                            formatChoice = scanner.nextInt();
                             scanner.nextLine();
                         } catch (InputMismatchException e) {
-                            System.out.println("\nX ERROR: InvalidMenuChoiceException\n   Please enter a valid number (1-3).\n");
+                            System.out.println("\nX ERROR: InvalidMenuChoiceException\n   Please enter a valid number (1-4).\n");
                             scanner.nextLine();
                             break;
                         }
 
-                        if (exportOption >= 1 && exportOption <= 3) {
-                            System.out.print("Enter filename (without extension): ");
-                            String fileName = scanner.nextLine();
-                            System.out.println();
+                        System.out.println();
+                        System.out.println("Report Type:");
+                        System.out.println("1. Summary Report");
+                        System.out.println("2. Detailed Report");
+                        System.out.println("3. Transcript Format");
+                        System.out.println("4. Performance Analytics");
+                        System.out.println();
 
-                            try{
-                                FileExporter exporter = new FileExporter(fileName);
-                                StringBuilder content= new StringBuilder();
+                        System.out.print("Select type (1-4): ");
+                        int reportTypeChoice;
+                        try {
+                            reportTypeChoice = scanner.nextInt();
+                            scanner.nextLine();
+                        } catch (InputMismatchException e) {
+                            System.out.println("\nX ERROR: InvalidMenuChoiceException\n   Please enter a valid number (1-4).\n");
+                            scanner.nextLine();
+                            break;
+                        }
 
-                                content.append("==================================================\n");
-                                content.append("                   GRADE REPORT                   \n");
-                                content.append("==================================================\n\n");
+                        String reportType;
+                        switch (reportTypeChoice) {
+                            case 1: reportType = "Summary Report"; break;
+                            case 2: reportType = "Detailed Report"; break;
+                            case 3: reportType = "Transcript Format"; break;
+                            case 4: reportType = "Performance Analytics"; break;
+                            default: reportType = "Detailed Report"; break;
+                        }
 
-                                // Added option 3 for when user wants BOTH
-                                if (exportOption == 1 || exportOption == 3) {
-                                    // SUMMARY REPORT
-                                    content.append("                SUMMARY REPORT                \n\n");
-                                    content.append(String.format("Student ID: %s\n", student.getStudentId()));
-                                    content.append(String.format("Name: %s\n", student.getName()));
-                                    content.append(String.format("Type: %s\n", student.getStudentType()));
-                                    content.append(String.format("Total Subjects: %d\n", student.getEnrolledSubjectsCount()));
+                        System.out.print("Enter filename (without extension): ");
+                        String fileName = scanner.nextLine();
+                        System.out.println();
 
-                                    // Adding student summary
-                                    double average = student.calculateAverageGrade();
-                                    content.append(String.format("Overall Average: %.2f\n", average));
+                        try {
+                            // Build StudentReport
+                            double overallAverage = student.calculateAverageGrade();
+                            StudentReport report = new StudentReport(
+                                student.getStudentId(),
+                                student.getName(),
+                                student.getStudentType(),
+                                overallAverage,
+                                reportType
+                            );
 
-                                    // Performance analysis
-                                    content.append("\nPerformance Analysis:\n");
-                                    if (average >= 85) {
-                                        content.append("- Excellent performance\n");
-                                    } else if (average >= 70) {
-                                        content.append("- Good performance\n");
-                                    } else if (average >= 50) {
-                                        content.append("- Satisfactory performance\n");
-                                    } else {
-                                        content.append("- Needs improvement\n");
-                                    }
-                                    content.append("\n");
+                            // Add all grades to report
+                            for (Grade studentGrade : gradeManager.getGrades()) {
+                                if (studentGrade != null && studentGrade.getStudentId().equals(studentId)) {
+                                    GradeData gradeData = new GradeData(
+                                        studentGrade.getGradeId(),
+                                        studentGrade.getDate(),
+                                        studentGrade.getSubject().getSubjectName(),
+                                        studentGrade.getSubject().getSubjectType(),
+                                        studentGrade.getGrade()
+                                    );
+                                    report.addGrade(gradeData);
                                 }
+                            }
 
-                                // Added option 3 for when user wants BOTH
-                                if (exportOption == 2 || exportOption == 3) {
-                                    if (exportOption == 3) {
-                                        content.append("==================================================\n");
-                                    }
+                            // Generate filename with student name
+                            String sanitizedFileName = fileName.toLowerCase().replaceAll("[^a-z0-9_]", "_");
+                            if (sanitizedFileName.isEmpty()) {
+                                sanitizedFileName = student.getName().toLowerCase().replaceAll("[^a-z0-9_]", "_");
+                            }
+                            String reportTypeSuffix = reportType.toLowerCase().replaceAll(" ", "_");
+                            String finalFileName = sanitizedFileName + "_" + reportTypeSuffix;
 
-                                    content.append("                DETAILED REPORT                \n\n");
-                                    content.append(String.format("Student ID: %s\n", student.getStudentId()));
-                                    content.append(String.format("Name: %s\n", student.getName()));
-                                    content.append(String.format("Type: %s\n", student.getStudentType()));
+                            // Export using MultiFormatFileHandler
+                            MultiFormatFileHandler fileHandler = new MultiFormatFileHandler();
 
-                                    content.append("All Grades:\n");
-                                    content.append("==================================================\n");
-                                    content.append(gradeManager.viewGradesByStudent(studentId));
+                            if (formatChoice == 4) {
+                                // Export to all formats
+                                MultiFormatFileHandler.ExportResult result = fileHandler.exportToAllFormats(report, finalFileName);
 
-                                    content.append("\n");
-                                    double average = student.calculateAverageGrade();
-                                    content.append(String.format("Overall Average: %.2f\n", average));
-
-                                }
-
-                                content.append("==================================================\n");
-                                content.append("                  End of Report                 \n\n");
-                                content.append("==================================================\n");
-
-                                exporter.exportGradeToTXT(content.toString());
-
-                                // Getting the size of the exported file
-                                Path filePath = Paths.get("./reports/" + fileName + ".txt");
-                                String fileSizeFormatted;
-                                try {
-                                    long fileSizeBytes = Files.size(filePath);
-                                    fileSizeFormatted = formatFileSize(fileSizeBytes);
-                                } catch (IOException e) {
-                                    fileSizeFormatted = "Unknown";
-                                }
-
-                                System.out.println("Report exported successfully!");
-                                System.out.printf("File: %s.txt\n", fileName);
-                                System.out.println("Location: ./reports/");
-                                System.out.printf("Size: %s\n", fileSizeFormatted);
-                                System.out.printf("Contains: %d grades, averages, performance summary\n", student.getEnrolledSubjectsCount());
+                                System.out.println("✓ CSV Export completed");
+                                System.out.printf("  File: %s.csv\n", finalFileName);
+                                System.out.printf("  Location: %s\n", result.getCsvPath().getParent());
+                                System.out.printf("  Size: %s\n", formatFileSize(result.getCsvSize()));
+                                System.out.printf("  Content: %d grades + header\n", report.getGrades().size());
+                                System.out.printf("  Time: %dms\n", result.getCsvTime());
                                 System.out.println();
 
-                            } catch (FileExportException e) {
-                                throw new FileExportException(
-                                        "X ERROR: FileExportException\n   Failed to export file" + fileName + ".txt"
+                                System.out.println("✓ JSON Export completed");
+                                System.out.printf("  File: %s.json\n", finalFileName);
+                                System.out.printf("  Location: %s\n", result.getJsonPath().getParent());
+                                System.out.printf("  Size: %s\n", formatFileSize(result.getJsonSize()));
+                                System.out.println("  Structure: Nested objects with metadata");
+                                System.out.printf("  Time: %dms\n", result.getJsonTime());
+                                System.out.println();
 
-                                );
+                                System.out.println("✓ Binary Export completed");
+                                System.out.printf("  File: %s.dat\n", finalFileName);
+                                System.out.printf("  Location: %s\n", result.getBinaryPath().getParent());
+                                System.out.printf("  Size: %s (compressed)\n", formatFileSize(result.getBinarySize()));
+                                System.out.println("  Format: Serialized StudentReport object");
+                                System.out.printf("  Time: %dms\n", result.getBinaryTime());
+                                System.out.println();
+
+                                // Performance summary
+                                System.out.println(fileHandler.getPerformanceSummary());
+
+                            } else {
+                                Path exportedPath = null;
+                                long fileSize = 0;
+                                long writeTime = 0;
+
+                                switch (formatChoice) {
+                                    case 1:
+                                        exportedPath = fileHandler.exportToCSV(report, finalFileName);
+                                        fileSize = fileHandler.getCsvFileSize();
+                                        writeTime = fileHandler.getCsvWriteTime();
+                                        System.out.println("✓ CSV Export completed");
+                                        System.out.printf("  File: %s.csv\n", finalFileName);
+                                        break;
+                                    case 2:
+                                        exportedPath = fileHandler.exportToJSON(report, finalFileName);
+                                        fileSize = fileHandler.getJsonFileSize();
+                                        writeTime = fileHandler.getJsonWriteTime();
+                                        System.out.println("✓ JSON Export completed");
+                                        System.out.printf("  File: %s.json\n", finalFileName);
+                                        break;
+                                    case 3:
+                                        exportedPath = fileHandler.exportToBinary(report, finalFileName);
+                                        fileSize = fileHandler.getBinaryFileSize();
+                                        writeTime = fileHandler.getBinaryWriteTime();
+                                        System.out.println("✓ Binary Export completed");
+                                        System.out.printf("  File: %s.dat\n", finalFileName);
+                                        break;
+                                }
+
+                                if (exportedPath != null) {
+                                    System.out.printf("  Location: %s\n", exportedPath.getParent());
+                                    System.out.printf("  Size: %s\n", formatFileSize(fileSize));
+                                    System.out.printf("  Time: %dms\n", writeTime);
+                                    System.out.println();
+                                }
                             }
-                        } else {
-                            throw new InvalidMenuChoiceException(
-                                    "X ERROR: InvalidMenuChoiceException\n   Please select a valid option (1-3).\n"
-                            );
+
+                        } catch (FileExportException e) {
+                            System.out.println(e.getMessage());
+                            System.out.println();
                         }
-                    } catch (StudentNotFoundException | InvalidMenuChoiceException | FileExportException e) {
+
+                    } catch (StudentNotFoundException e) {
                         System.out.println(e.getMessage());
                         System.out.println();
                     }
