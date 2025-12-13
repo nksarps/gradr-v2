@@ -32,7 +32,7 @@ public class Main {
         do {
             displayMainMenu();
 
-            // Checking if the user entered a valid number between 1 and 10
+            // Checking if the user entered a valid number between 1 and 19
             try {
                 System.out.print("Enter choice: ");
                 choice = scanner.nextInt();
@@ -40,7 +40,7 @@ public class Main {
                 System.out.println();
             } catch (InputMismatchException e) {
                 System.out.println(
-                        "\n\nX ERROR: InvalidMenuChoiceException\n   Please enter a valid number (1-10).\n"
+                        "\n\nX ERROR: InvalidMenuChoiceException\n   Please enter a valid number (1-19).\n"
                 );
                 System.out.println();
                 scanner.nextLine();
@@ -603,33 +603,12 @@ public class Main {
 
                     break;
                 case 6:
-                    System.out.println("CALCULATE STUDENT GPA");
+                    System.out.println("IMPORT DATA (Multi-format support) [ENHANCED]");
                     System.out.println("_______________________________________________");
                     System.out.println();
-
-                    System.out.print("Enter Student ID: ");
-                    studentId = scanner.nextLine();
+                    System.out.println("This feature will support CSV, JSON, and Binary format imports.");
+                    System.out.println("Implementation coming soon...");
                     System.out.println();
-
-                    try {
-                        student = studentManager.findStudent(studentId);
-
-                        // Check if student has any grades
-                        if (student.getEnrolledSubjectsCount() == 0) {
-                            System.out.println("No grades recorded for this student yet.");
-                            System.out.println();
-                            break;
-                        }
-
-                        // Create GPA calculator and generate report
-                        GPACalculator gpaCalculator = new GPACalculator(gradeManager);
-                        String gpaReport = gpaCalculator.generateGPAReport(studentId, student, studentManager);
-                        System.out.println(gpaReport);
-                    } catch (StudentNotFoundException e) {
-                        System.out.println(e.getMessage());
-                        System.out.println();
-                    }
-
                     break;
                 case 7:
                     System.out.println("BULK IMPORT GRADES");
@@ -818,6 +797,35 @@ public class Main {
 
                     break;
                 case 8:
+                    System.out.println("CALCULATE STUDENT GPA");
+                    System.out.println("_______________________________________________");
+                    System.out.println();
+
+                    System.out.print("Enter Student ID: ");
+                    studentId = scanner.nextLine();
+                    System.out.println();
+
+                    try {
+                        student = studentManager.findStudent(studentId);
+
+                        // Check if student has any grades
+                        if (student.getEnrolledSubjectsCount() == 0) {
+                            System.out.println("No grades recorded for this student yet.");
+                            System.out.println();
+                            break;
+                        }
+
+                        // Create GPA calculator and generate report
+                        GPACalculator gpaCalculator = new GPACalculator(gradeManager);
+                        String gpaReport = gpaCalculator.generateGPAReport(studentId, student, studentManager);
+                        System.out.println(gpaReport);
+                    } catch (StudentNotFoundException e) {
+                        System.out.println(e.getMessage());
+                        System.out.println();
+                    }
+
+                    break;
+                case 9:
                     System.out.println("VIEW CLASS STATISTICS");
                     System.out.println("_______________________________________________");
                     System.out.println();
@@ -835,8 +843,24 @@ public class Main {
                     System.out.println(statsReport);
 
                     break;
-                case 9:
-                    System.out.println("SEARCH STUDENTS");
+                case 10:
+                    System.out.println("REAL-TIME STATISTICS DASHBOARD [NEW]");
+                    System.out.println("_______________________________________________");
+                    System.out.println();
+                    System.out.println("This feature will provide real-time statistics dashboard.");
+                    System.out.println("Implementation coming soon...");
+                    System.out.println();
+                    break;
+                case 11:
+                    System.out.println("GENERATE BATCH REPORTS [NEW]");
+                    System.out.println("_______________________________________________");
+                    System.out.println();
+                    System.out.println("This feature will generate batch reports for multiple students.");
+                    System.out.println("Implementation coming soon...");
+                    System.out.println();
+                    break;
+                case 12:
+                    System.out.println("SEARCH STUDENTS (Advanced) [ENHANCED]");
                     System.out.println("_______________________________________________");
                     System.out.println();
 
@@ -1041,23 +1065,71 @@ public class Main {
                         System.out.println();
                     }
                     break;
-                case 10:
+                case 13:
+                    System.out.println("PATTERN-BASED SEARCH [NEW]");
+                    System.out.println("_______________________________________________");
+                    System.out.println();
+                    System.out.println("This feature will allow pattern-based searching.");
+                    System.out.println("Implementation coming soon...");
+                    System.out.println();
+                    break;
+                case 14:
+                    System.out.println("QUERY GRADE HISTORY [NEW]");
+                    System.out.println("_______________________________________________");
+                    System.out.println();
+                    System.out.println("This feature will allow querying grade history with filters.");
+                    System.out.println("Implementation coming soon...");
+                    System.out.println();
+                    break;
+                case 15:
+                    System.out.println("SCHEDULE AUTOMATED TASKS [NEW]");
+                    System.out.println("_______________________________________________");
+                    System.out.println();
+                    System.out.println("This feature will allow scheduling automated tasks.");
+                    System.out.println("Implementation coming soon...");
+                    System.out.println();
+                    break;
+                case 16:
+                    System.out.println("VIEW SYSTEM PERFORMANCE [NEW]");
+                    System.out.println("_______________________________________________");
+                    System.out.println();
+                    System.out.println("This feature will display system performance metrics.");
+                    System.out.println("Implementation coming soon...");
+                    System.out.println();
+                    break;
+                case 17:
+                    System.out.println("CACHE MANAGEMENT [NEW]");
+                    System.out.println("_______________________________________________");
+                    System.out.println();
+                    System.out.println("This feature will manage system cache.");
+                    System.out.println("Implementation coming soon...");
+                    System.out.println();
+                    break;
+                case 18:
+                    System.out.println("AUDIT TRAIL VIEWER [NEW]");
+                    System.out.println("_______________________________________________");
+                    System.out.println();
+                    System.out.println("This feature will display audit trail logs.");
+                    System.out.println("Implementation coming soon...");
+                    System.out.println();
+                    break;
+                case 19:
                     System.out.println("Thank you for using Student Grade Management System!");
                     System.out.println("Goodbye!");
                     break;
                 default:
                     try {
                         throw new InvalidMenuChoiceException(
-                                "X ERROR: InvalidMenuChoiceException\n   Please select a valid option (1-10).\n   You entered: " + choice
+                                "X ERROR: InvalidMenuChoiceException\n   Please select a valid option (1-19).\n   You entered: " + choice
                         );
                     } catch (InvalidMenuChoiceException e) {
                         System.out.println(
-                                "X ERROR: InvalidMenuChoiceException\n   Please select a valid option (1-10).\n   You entered: " + choice
+                                "X ERROR: InvalidMenuChoiceException\n   Please select a valid option (1-19).\n   You entered: " + choice
                         );
                         System.out.println();
                     }
             }
-        } while (choice != 10);
+        } while (choice != 19);
 
         scanner.close();
     }
@@ -1081,21 +1153,49 @@ public class Main {
 
     // Class for displaying the Main Menu
     public static void displayMainMenu() {
-        System.out.println("||=============================================||");
-        System.out.println("||     STUDENT GRADE MANAGEMENT - MAIN MENU    ||");
-        System.out.println("||=============================================||");
+        System.out.println("||=============================================================||");
+        System.out.println("||             STUDENT GRADE MANAGEMENT - MAIN MENU            ||");
+        System.out.println("||=============================================================||");
         System.out.println();
 
-        System.out.println("1. Add Student");
+        System.out.println("STUDENT MANAGEMENT");
+        System.out.println("1. Add Student (with validation)");
         System.out.println("2. View Students");
         System.out.println("3. Record Grade");
         System.out.println("4. View Grade Report");
-        System.out.println("5. Export Grade Report [NEW]");
-        System.out.println("6. Calculate Student GPA [NEW]");
-        System.out.println("7. Bulk Import Grades [NEW]");
-        System.out.println("8. View Class Statistics [NEW]");
-        System.out.println("9. Search Students [NEW]");
-        System.out.println("10. Exit");
+        System.out.println();
+
+        System.out.println("FILE OPERATIONS");
+        System.out.println("5. Export Grade Report (CSV/JSON/Binary)");
+        System.out.println("6. Import Data (Multi-format support) [ENHANCED]");
+        System.out.println("7. Bulk Import Grades");
+        System.out.println();
+
+        System.out.println("ANALYTICS & REPORTING");
+        System.out.println("8. Calculate Student GPA");
+        System.out.println("9. View Class Statistics");
+        System.out.println("10. Real-Time Statistics Dashboard [NEW]");
+        System.out.println("11. Generate Batch Reports [NEW]");
+        System.out.println();
+
+        System.out.println("SEARCH & QUERY");
+        System.out.println("12. Search Students (Advanced) [ENHANCED]");
+        System.out.println("13. Pattern-Based Search [NEW]");
+        System.out.println("14. Query Grade History [NEW]");
+        System.out.println();
+
+        System.out.println("ADVANCED FEATURES");
+        System.out.println("15. Schedule Automated Tasks [NEW]");
+        System.out.println("16. View System Performance [NEW]");
+        System.out.println("17. Cache Management [NEW]");
+        System.out.println("18. Audit Trail Viewer [NEW]");
+        System.out.println();
+
+        System.out.println("19. Exit");
+        System.out.println();
+        
+        // Display background tasks status (placeholder for future implementation)
+        System.out.println("Background Tasks: ⚡ 0 active | 📊 Stats updating...");
         System.out.println();
     }
 }
