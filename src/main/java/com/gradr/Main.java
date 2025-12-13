@@ -4,15 +4,11 @@ import com.gradr.exceptions.*;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.InputMismatchException;
-import java.util.List;
-import java.util.Map;
-import java.util.Scanner;
+import java.util.*;
 
 public class Main {
     public static void main(String[] args) throws StudentNotFoundException {
@@ -29,6 +25,13 @@ public class Main {
         
         // Cache warming on startup
         cacheManager.warmCache(studentManager, gradeManager);
+        
+        // Pattern search service (for performance monitoring)
+        PatternSearchService patternSearchService = new PatternSearchService(studentManager);
+        
+        // System performance monitor (initialized on startup)
+        SystemPerformanceMonitor performanceMonitor = new SystemPerformanceMonitor(
+            studentManager, gradeManager, cacheManager, patternSearchService);
         
         // Task scheduler (initialized on first use)
         // Use array to allow modification in shutdown hook
@@ -928,6 +931,9 @@ public class Main {
                 case 10:
                     try {
                         StatisticsDashboard dashboard = new StatisticsDashboard(studentManager, gradeManager);
+                        // Register thread pool with performance monitor
+                        performanceMonitor.registerThreadPool("CachedThreadPool", 
+                            dashboard.getExecutorService(), dashboard.getMaxThreadCount());
                         dashboard.start();
                         
                         System.out.println("Dashboard started. Commands: Q=Quit, R=Refresh, P=Pause/Resume");
@@ -1090,6 +1096,11 @@ public class Main {
                         if (!batchGenerator.initializeThreadPool(threadCount)) {
                             System.out.println("X ERROR: Failed to initialize thread pool\n");
                             break;
+                        }
+                        // Register thread pool with performance monitor
+                        if (batchGenerator.getExecutorService() != null) {
+                            performanceMonitor.registerThreadPool("FixedThreadPool", 
+                                batchGenerator.getExecutorService(), batchGenerator.getMaxThreadCount());
                         }
                         System.out.println("✓ Fixed Thread Pool created: " + threadCount + " threads");
                         System.out.println();
@@ -1595,6 +1606,8 @@ public class Main {
                         if (!schedulerInitialized) {
                             taskSchedulerRef[0] = new TaskScheduler(studentManager, gradeManager);
                             schedulerInitialized = true;
+                            // Register thread pool with performance monitor (ScheduledPool uses 3 threads)
+                            performanceMonitor.registerThreadPool("ScheduledPool", null, 3);
                         }
                         
                         TaskScheduler taskScheduler = taskSchedulerRef[0];
@@ -1877,12 +1890,80 @@ public class Main {
                     }
                     break;
                 case 16:
-                    System.out.println("VIEW SYSTEM PERFORMANCE [NEW]");
-                    System.out.println("_______________________________________________");
-                    System.out.println();
-                    System.out.println("This feature will display system performance metrics.");
-                    System.out.println("Implementation coming soon...");
-                    System.out.println();
+                    try {
+                        System.out.println("VIEW SYSTEM PERFORMANCE");
+                        System.out.println("_______________________________________________");
+                        System.out.println();
+                        
+                        System.out.println("Performance Monitor Options:");
+                        System.out.println("1. Resource Utilization");
+                        System.out.println("2. System Performance Monitor");
+                        System.out.println("3. Detailed Performance Metrics");
+                        System.out.println("4. Return to Main Menu");
+                        System.out.println();
+                        
+                        System.out.print("Select option (1-4): ");
+                        int perfOption;
+                        try {
+                            perfOption = scanner.nextInt();
+                            scanner.nextLine();
+                        } catch (InputMismatchException e) {
+                            System.out.println("\nX ERROR: InvalidMenuChoiceException\n   Please enter a valid number (1-4).\n");
+                            scanner.nextLine();
+                            break;
+                        }
+                        
+                        System.out.println();
+                        
+                        switch (perfOption) {
+                            case 1:
+                                // Resource Utilization View
+                                performanceMonitor.displayResourceUtilization();
+                                System.out.print("Press Enter to continue...");
+                                scanner.nextLine();
+                                break;
+                                
+                            case 2:
+                                // System Performance Monitor (interactive)
+                                boolean monitoring = true;
+                                while (monitoring) {
+                                    performanceMonitor.displaySystemPerformance();
+                                    System.out.print("Press 'Q' to quit, 'R' to refresh: ");
+                                    String input = scanner.nextLine().trim().toUpperCase();
+                                    if (input.equals("Q")) {
+                                        monitoring = false;
+                                    }
+                                    // Refresh automatically after 2 seconds if 'R' or any other key
+                                    try {
+                                        Thread.sleep(2000);
+                                    } catch (InterruptedException e) {
+                                        Thread.currentThread().interrupt();
+                                        monitoring = false;
+                                    }
+                                }
+                                break;
+                                
+                            case 3:
+                                // Detailed Performance Metrics
+                                performanceMonitor.displayDetailedPerformance();
+                                System.out.print("Press Enter to continue...");
+                                scanner.nextLine();
+                                break;
+                                
+                            case 4:
+                                // Return to main menu
+                                break;
+                                
+                            default:
+                                System.out.println("X ERROR: InvalidMenuChoiceException\n   Please enter a valid option (1-4).\n");
+                                break;
+                        }
+                        System.out.println();
+                    } catch (Exception e) {
+                        System.out.println();
+                        System.out.println("X ERROR: " + e.getClass().getSimpleName() + "\n   " + e.getMessage());
+                        System.out.println();
+                    }
                     break;
                 case 17:
                     try {

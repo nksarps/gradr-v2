@@ -52,6 +52,22 @@ public class StatisticsDashboard {
     }
     
     /**
+     * Get the executor service (for monitoring)
+     * @return ExecutorService
+     */
+    public ExecutorService getExecutorService() {
+        return statsPool;
+    }
+    
+    /**
+     * Get max thread count (cached thread pool has no fixed max)
+     * @return Estimated max or 8 as default
+     */
+    public int getMaxThreadCount() {
+        return 8; // Cached thread pool default
+    }
+    
+    /**
      * Start the background daemon thread
      */
     public void start() {

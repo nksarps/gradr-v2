@@ -63,6 +63,26 @@ public class BatchReportGenerator {
     }
     
     /**
+     * Get the executor service (for monitoring)
+     * @return ExecutorService or null if not initialized
+     */
+    public ExecutorService getExecutorService() {
+        return executorService;
+    }
+    
+    /**
+     * Get max thread count
+     * @return Max thread count or 0 if not initialized
+     */
+    public int getMaxThreadCount() {
+        if (executorService instanceof ThreadPoolExecutor) {
+            ThreadPoolExecutor tpe = (ThreadPoolExecutor) executorService;
+            return tpe.getMaximumPoolSize();
+        }
+        return 0;
+    }
+    
+    /**
      * Generate batch reports for all students
      * @param reportType Type of report to generate
      * @param formatChoice Format choice (1=CSV, 2=JSON, 3=Binary, 4=All)
