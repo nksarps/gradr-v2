@@ -902,12 +902,72 @@ public class Main {
 
                     break;
                 case 10:
-                    System.out.println("REAL-TIME STATISTICS DASHBOARD [NEW]");
-                    System.out.println("_______________________________________________");
-                    System.out.println();
-                    System.out.println("This feature will provide real-time statistics dashboard.");
-                    System.out.println("Implementation coming soon...");
-                    System.out.println();
+                    try {
+                        StatisticsDashboard dashboard = new StatisticsDashboard(studentManager, gradeManager);
+                        dashboard.start();
+                        
+                        // Main dashboard loop - use AtomicBoolean for thread safety
+                        java.util.concurrent.atomic.AtomicBoolean running = new java.util.concurrent.atomic.AtomicBoolean(true);
+                        
+                        // Input handling thread
+                        Thread inputThread = new Thread(() -> {
+                            Scanner dashboardScanner = new Scanner(System.in);
+                            while (running.get() && dashboard.isRunning()) {
+                                try {
+                                    String input = dashboardScanner.nextLine().trim().toUpperCase();
+                                    
+                                    synchronized (dashboard) {
+                                        switch (input) {
+                                            case "Q":
+                                                running.set(false);
+                                                break;
+                                            case "R":
+                                                dashboard.refresh();
+                                                break;
+                                            case "P":
+                                                if (dashboard.isPaused()) {
+                                                    dashboard.resume();
+                                                } else {
+                                                    dashboard.pause();
+                                                }
+                                                break;
+                                            default:
+                                                // Ignore other input
+                                                break;
+                                        }
+                                    }
+                                } catch (Exception e) {
+                                    // Input thread error - continue
+                                }
+                            }
+                            dashboardScanner.close();
+                        });
+                        inputThread.setDaemon(true);
+                        inputThread.start();
+                        
+                        // Display loop
+                        while (running.get() && dashboard.isRunning()) {
+                            dashboard.displayDashboard();
+                            
+                            // Small delay to prevent excessive CPU usage
+                            try {
+                                Thread.sleep(1000); // Update every second
+                            } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                                running.set(false);
+                            }
+                        }
+                        
+                        dashboard.stop();
+                        System.out.println();
+                        System.out.println("Dashboard closed.");
+                        System.out.println();
+                        
+                    } catch (Exception e) {
+                        System.out.println();
+                        System.out.println("X ERROR: " + e.getClass().getSimpleName() + "\n   " + e.getMessage());
+                        System.out.println();
+                    }
                     break;
                 case 11:
                     try {
