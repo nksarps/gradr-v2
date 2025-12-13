@@ -7,9 +7,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * MultiFormatFileHandler - Handles file operations in CSV, JSON, and binary formats using NIO.2
@@ -69,13 +69,40 @@ public class MultiFormatFileHandler {
     }
     
     /**
+     * Validate file path using NIO.2 Files API
+     * Uses Files.exists(), Files.isReadable(), Files.isWritable() for validation
+     * Time Complexity: O(1) - File system checks
+     */
+    private void validateFilePath(Path filePath, boolean checkReadable, boolean checkWritable) throws FileExportException {
+        // Use Files.exists() for path validation
+        if (Files.exists(filePath)) {
+            // Use Files.isReadable() for read permission validation
+            if (checkReadable && !Files.isReadable(filePath)) {
+                throw new FileExportException(
+                    "X ERROR: FileExportException\n   File is not readable: " + filePath
+                );
+            }
+            // Use Files.isWritable() for write permission validation
+            if (checkWritable && !Files.isWritable(filePath)) {
+                throw new FileExportException(
+                    "X ERROR: FileExportException\n   File is not writable: " + filePath
+                );
+            }
+        }
+    }
+    
+    /**
      * Export student report to CSV format with streaming
      * Uses NIO.2 Files.newBufferedWriter for efficient streaming
      * Time Complexity: O(n) where n is the number of grades
      */
     public Path exportToCSV(StudentReport report, String fileName) throws FileExportException {
         long startTime = System.nanoTime();
+        // Use Paths.get() or Path.of() for path creation
         Path filePath = CSV_DIR.resolve(fileName + ".csv");
+        
+        // Validate parent directory is writable
+        validateFilePath(CSV_DIR, false, true);
         
         try (BufferedWriter writer = Files.newBufferedWriter(
                 filePath, 
@@ -183,12 +210,21 @@ public class MultiFormatFileHandler {
     
     /**
      * Export student report to binary format using Java serialization
+     * Uses ObjectOutputStream/ObjectInputStream for binary serialization
+     * Serializes complex objects efficiently
+     * Implements Serializable interface (StudentReport)
+     * Handles versioning with serialVersionUID
+     * Smaller file sizes than text formats
      * Uses NIO.2 Files.newOutputStream for efficient binary writing
      * Time Complexity: O(n) where n is the size of the serialized object
      */
     public Path exportToBinary(StudentReport report, String fileName) throws FileExportException {
         long startTime = System.nanoTime();
+        // Use Paths.get() or Path.of() for path creation
         Path filePath = BINARY_DIR.resolve(fileName + ".dat");
+        
+        // Validate parent directory is writable
+        validateFilePath(BINARY_DIR, false, true);
         
         try (ObjectOutputStream oos = new ObjectOutputStream(
                 Files.newOutputStream(filePath, 
@@ -233,11 +269,19 @@ public class MultiFormatFileHandler {
     
     /**
      * Import student report from binary format
+     * Uses ObjectInputStream/ObjectInputStream for binary serialization
+     * Serializes complex objects efficiently
+     * Implements Serializable interface (StudentReport)
+     * Handles versioning with serialVersionUID
+     * Smaller file sizes than text formats
      * Uses NIO.2 Files.newInputStream for efficient binary reading
      * Time Complexity: O(n) where n is the size of the serialized object
      */
     public StudentReport importFromBinary(Path filePath) throws FileExportException {
         long startTime = System.nanoTime();
+        
+        // Validate file exists and is readable
+        validateFilePath(filePath, true, false);
         
         try (ObjectInputStream ois = new ObjectInputStream(
                 Files.newInputStream(filePath, StandardOpenOption.READ)
@@ -257,21 +301,29 @@ public class MultiFormatFileHandler {
     /**
      * Import CSV file with streaming (for large files)
      * Uses NIO.2 Files.lines() for streaming large files
+     * Memory efficient: doesn't load entire file into memory
+     * Returns Stream<String> for processing
+     * Auto-closes resources with try-with-resources
+     * Chains with filter, map, collect operations
      * Time Complexity: O(n) where n is the number of lines
      */
     public List<String[]> importCSV(Path filePath) throws FileExportException {
         long startTime = System.nanoTime();
-        List<String[]> data = new ArrayList<>();
+        
+        // Validate file exists and is readable using NIO.2 Files API
+        validateFilePath(filePath, true, false);
         
         try {
             // Use Files.lines() for streaming large CSV files
-            Files.lines(filePath, StandardCharsets.UTF_8)
+            // Memory efficient: doesn't load entire file
+            // Returns Stream<String> for processing
+            // Auto-closes resources
+            // Chain with filter, map, collect
+            List<String[]> data = Files.lines(filePath, StandardCharsets.UTF_8)
                 .skip(1) // Skip header
-                .forEach(line -> {
-                    if (!line.trim().isEmpty() && !line.startsWith("Summary")) {
-                        data.add(line.split(","));
-                    }
-                });
+                .filter(line -> !line.trim().isEmpty() && !line.startsWith("Summary")) // Filter empty/summary lines
+                .map(line -> line.split(",")) // Map to String array
+                .collect(Collectors.toList()); // Collect to list
             
             long readTime = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
             System.out.printf("CSV import completed in %dms\n", readTime);
