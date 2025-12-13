@@ -906,59 +906,51 @@ public class Main {
                         StatisticsDashboard dashboard = new StatisticsDashboard(studentManager, gradeManager);
                         dashboard.start();
                         
-                        // Main dashboard loop - use AtomicBoolean for thread safety
-                        java.util.concurrent.atomic.AtomicBoolean running = new java.util.concurrent.atomic.AtomicBoolean(true);
+                        System.out.println("Dashboard started. Commands: Q=Quit, R=Refresh, P=Pause/Resume");
+                        System.out.println("Type command and press Enter.");
+                        System.out.println();
+                        Thread.sleep(500); // Brief pause to show message
                         
-                        // Input handling thread
-                        Thread inputThread = new Thread(() -> {
-                            Scanner dashboardScanner = new Scanner(System.in);
-                            while (running.get() && dashboard.isRunning()) {
-                                try {
-                                    String input = dashboardScanner.nextLine().trim().toUpperCase();
-                                    
-                                    synchronized (dashboard) {
-                                        switch (input) {
-                                            case "Q":
-                                                running.set(false);
-                                                break;
-                                            case "R":
-                                                dashboard.refresh();
-                                                break;
-                                            case "P":
-                                                if (dashboard.isPaused()) {
-                                                    dashboard.resume();
-                                                } else {
-                                                    dashboard.pause();
-                                                }
-                                                break;
-                                            default:
-                                                // Ignore other input
-                                                break;
-                                        }
-                                    }
-                                } catch (Exception e) {
-                                    // Input thread error - continue
-                                }
-                            }
-                            dashboardScanner.close();
-                        });
-                        inputThread.setDaemon(true);
-                        inputThread.start();
+                        // Simplified approach: single-threaded with blocking input
+                        // This avoids any thread synchronization issues
+                        boolean shouldQuit = false;
                         
-                        // Display loop
-                        while (running.get() && dashboard.isRunning()) {
-                            dashboard.displayDashboard();
+                        // Display initial dashboard
+                        dashboard.displayDashboard();
+                        
+                        while (!shouldQuit && dashboard.isRunning()) {
+                            // Show prompt and wait for input (this blocks)
+                            System.out.print("Command (Q/R/P): ");
+                            System.out.flush(); // Ensure prompt is visible
                             
-                            // Small delay to prevent excessive CPU usage
-                            try {
-                                Thread.sleep(1000); // Update every second
-                            } catch (InterruptedException e) {
-                                Thread.currentThread().interrupt();
-                                running.set(false);
+                            // Read input (blocks until user types something)
+                            String input = scanner.nextLine().trim().toUpperCase();
+                            
+                            // Process command
+                            if (input.equals("Q")) {
+                                shouldQuit = true;
+                                break;
+                            } else if (input.equals("R")) {
+                                dashboard.refresh();
+                                dashboard.displayDashboard();
+                            } else if (input.equals("P")) {
+                                if (dashboard.isPaused()) {
+                                    dashboard.resume();
+                                } else {
+                                    dashboard.pause();
+                                }
+                                dashboard.displayDashboard();
+                            } else if (!input.isEmpty()) {
+                                System.out.println("Unknown command. Use Q, R, or P.");
+                                System.out.println();
                             }
+                            
+                            // If not quitting, continue to next iteration (will show prompt again)
                         }
                         
+                        // Cleanup
                         dashboard.stop();
+                        
                         System.out.println();
                         System.out.println("Dashboard closed.");
                         System.out.println();

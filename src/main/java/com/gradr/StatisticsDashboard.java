@@ -354,9 +354,10 @@ public class StatisticsDashboard {
      * Display the dashboard
      */
     public void displayDashboard() {
-        // Clear screen (simple approach)
-        System.out.print("\033[H\033[2J");
-        System.out.flush();
+        // Don't clear screen - just print newlines to separate updates
+        // This prevents interference with input handling
+        System.out.println();
+        System.out.println();
         
         System.out.println("REAL-TIME STATISTICS DASHBOARD");
         System.out.println("_______________________________________________");
