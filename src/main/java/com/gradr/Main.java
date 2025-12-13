@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.InputMismatchException;
 import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
 
 public class Main {
@@ -1419,12 +1420,155 @@ public class Main {
                     }
                     break;
                 case 13:
-                    System.out.println("PATTERN-BASED SEARCH [NEW]");
-                    System.out.println("_______________________________________________");
-                    System.out.println();
-                    System.out.println("This feature will allow pattern-based searching.");
-                    System.out.println("Implementation coming soon...");
-                    System.out.println();
+                    try {
+                        System.out.println("PATTERN-BASED SEARCH");
+                        System.out.println("_______________________________________________");
+                        System.out.println();
+                        
+                        PatternSearchService searchService = new PatternSearchService(studentManager);
+                        
+                        System.out.println("Search Type:");
+                        System.out.println("1. Email Domain Pattern (e.g., @university.edu)");
+                        System.out.println("2. Phone Area Code Pattern (e.g., 555)");
+                        System.out.println("3. Student ID Pattern (e.g., STU0**)");
+                        System.out.println("4. Name Pattern (regex)");
+                        System.out.println("5. Custom Regex Pattern");
+                        System.out.println();
+                        
+                        System.out.print("Select type (1-5): ");
+                        int searchTypeChoice;
+                        try {
+                            searchTypeChoice = scanner.nextInt();
+                            scanner.nextLine();
+                        } catch (InputMismatchException e) {
+                            System.out.println("\nX ERROR: InvalidMenuChoiceException\n   Please enter a valid number (1-5).\n");
+                            scanner.nextLine();
+                            break;
+                        }
+                        
+                        System.out.println();
+                        System.out.print("Case-insensitive search? (Y/N): ");
+                        String caseInsensitiveInput = scanner.nextLine().trim().toUpperCase();
+                        boolean caseInsensitive = caseInsensitiveInput.equals("Y");
+                        System.out.println();
+                        
+                        PatternSearchService.SearchResults searchResults = null;
+                        String patternInput = "";
+                        
+                        switch (searchTypeChoice) {
+                            case 1:
+                                System.out.print("Enter email domain pattern: ");
+                                patternInput = scanner.nextLine();
+                                System.out.println();
+                                String emailRegex = patternInput.startsWith("@") ? 
+                                    ".*" + java.util.regex.Pattern.quote(patternInput) + "$" : 
+                                    ".*@" + java.util.regex.Pattern.quote(patternInput) + "$";
+                                System.out.println("Searching with regex: " + emailRegex);
+                                System.out.println("Processing " + studentManager.getStudentCount() + " students...");
+                                System.out.println();
+                                searchResults = searchService.searchByEmailDomain(patternInput, caseInsensitive);
+                                break;
+                            case 2:
+                                System.out.print("Enter phone area code pattern: ");
+                                patternInput = scanner.nextLine();
+                                System.out.println();
+                                System.out.println("Searching with pattern: " + patternInput);
+                                System.out.println("Processing " + studentManager.getStudentCount() + " students...");
+                                System.out.println();
+                                searchResults = searchService.searchByPhoneAreaCode(patternInput, caseInsensitive);
+                                break;
+                            case 3:
+                                System.out.print("Enter student ID pattern (use * for wildcard): ");
+                                patternInput = scanner.nextLine();
+                                System.out.println();
+                                System.out.println("Searching with pattern: " + patternInput);
+                                System.out.println("Processing " + studentManager.getStudentCount() + " students...");
+                                System.out.println();
+                                searchResults = searchService.searchByStudentIdPattern(patternInput, caseInsensitive);
+                                break;
+                            case 4:
+                                System.out.print("Enter name pattern: ");
+                                patternInput = scanner.nextLine();
+                                System.out.println();
+                                System.out.println("Searching with pattern: " + patternInput);
+                                System.out.println("Processing " + studentManager.getStudentCount() + " students...");
+                                System.out.println();
+                                searchResults = searchService.searchByNamePattern(patternInput, caseInsensitive);
+                                break;
+                            case 5:
+                                System.out.print("Enter custom regex pattern: ");
+                                patternInput = scanner.nextLine();
+                                System.out.println();
+                                System.out.println("Searching with regex: " + patternInput);
+                                System.out.println("Processing " + studentManager.getStudentCount() + " students...");
+                                System.out.println();
+                                searchResults = searchService.searchByCustomPattern(patternInput, null, caseInsensitive);
+                                break;
+                            default:
+                                System.out.println("X ERROR: Invalid search type\n");
+                                break;
+                        }
+                        
+                        if (searchResults == null) {
+                            break;
+                        }
+                        
+                        // Display results
+                        List<PatternSearchService.SearchResult> results = searchResults.getResults();
+                        PatternSearchService.SearchStatistics stats = searchResults.getStatistics();
+                        
+                        System.out.println("SEARCH RESULTS (" + results.size() + " found)");
+                        System.out.println("_______________________________________________");
+                        System.out.println();
+                        
+                        if (results.isEmpty()) {
+                            System.out.println("No matches found for pattern: " + patternInput);
+                            System.out.println();
+                        } else {
+                            System.out.printf("%-10s | %-25s | %-30s\n", "STU ID", "NAME", "EMAIL");
+                            System.out.println("_______________________________________________");
+                            for (PatternSearchService.SearchResult result : results) {
+                                Student s = result.getStudent();
+                                String email = s.getEmail() != null ? s.getEmail() : "N/A";
+                                System.out.printf("%-10s | %-25s | %-30s\n", 
+                                    s.getStudentId(), s.getName(), email);
+                            }
+                            System.out.println();
+                            
+                            // Display statistics
+                            System.out.println("Pattern Match Statistics:");
+                            System.out.println("_______________________________________________");
+                            System.out.println("Total Students Scanned: " + stats.getTotalScanned());
+                            System.out.println("Matches Found: " + stats.getMatchesFound() + 
+                                " (" + String.format("%.0f", stats.getMatchPercentage()) + "%)");
+                            System.out.println("Search Time: " + stats.getSearchTime() + "ms");
+                            System.out.println("Regex Complexity: " + stats.getRegexComplexity());
+                            System.out.println();
+                            
+                            // Display distribution if available
+                            Map<String, Integer> distribution = stats.getDistribution();
+                            if (!distribution.isEmpty()) {
+                                System.out.println("Distribution Statistics:");
+                                System.out.println("_______________________________________________");
+                                for (Map.Entry<String, Integer> entry : distribution.entrySet()) {
+                                    double percentage = stats.getTotalScanned() > 0 ? 
+                                        (entry.getValue() * 100.0 / stats.getTotalScanned()) : 0.0;
+                                    System.out.printf("%s: %d students (%.0f%%)\n", 
+                                        entry.getKey(), entry.getValue(), percentage);
+                                }
+                                System.out.println();
+                            }
+                        }
+                        
+                    } catch (IllegalArgumentException e) {
+                        System.out.println();
+                        System.out.println(e.getMessage());
+                        System.out.println();
+                    } catch (Exception e) {
+                        System.out.println();
+                        System.out.println("X ERROR: " + e.getClass().getSimpleName() + "\n   " + e.getMessage());
+                        System.out.println();
+                    }
                     break;
                 case 14:
                     System.out.println("QUERY GRADE HISTORY [NEW]");
