@@ -48,12 +48,15 @@ public class Main {
             switch (choice) {
                 case 1:
                     try{
-                        System.out.println("ADD STUDENT");
+                        System.out.println("ADD STUDENT (with validation)");
                         System.out.println("_______________________________________________");
                         System.out.println();
 
                         System.out.print("Enter student name: ");
                         String name = scanner.nextLine();
+                        // Validate name using compiled regex pattern
+                        ValidationUtils.validateName(name);
+                        System.out.println("Valid Student Name");
 
                         System.out.print("Enter student age: ");
                         String ageInput = scanner.nextLine();
@@ -70,33 +73,21 @@ public class Main {
                             }
                         } catch (NumberFormatException e) { // if the user entered a non-number age
                             throw new InvalidStudentDataException(
-                                    "X ERROR: InvalidStudentDataException\n   Age must be a valid number.\n   You entered: " + ageInput
+                                    "X VALIDATION ERROR: Invalid age format\n   Age must be a valid number.\n   You entered: " + ageInput
                             );
                         }
 
                         System.out.print("Enter student email: ");
                         String email = scanner.nextLine();
-                        
-                        // Validate email format using regex
-                        // Pattern: allows letters, numbers, dots, hyphens, underscores before @, 
-                        // then domain with letters, numbers, dots, and hyphens
-                        String emailRegex = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$";
-                        if (!email.matches(emailRegex)) {
-                            throw new InvalidStudentDataException(
-                                    "X ERROR: InvalidStudentDataException\n   Email format is invalid.\n   Expected format: example@domain.com\n   You entered: " + email
-                            );
-                        }
+                        // Validate email using compiled regex pattern
+                        ValidationUtils.validateEmail(email);
+                        System.out.println("Valid Email Address");
 
                         System.out.print("Enter student phone: ");
                         String phone = scanner.nextLine();
-                        
-                        // Validate phone format using regex
-                        String phoneRegex = "^(\\+?\\d{1,3}[-.\\s]?)?\\(?\\d{3}\\)?[-.\\s]?\\d{3}[-.\\s]?\\d{4}$";
-                        if (!phone.matches(phoneRegex)) {
-                            throw new InvalidStudentDataException(
-                                    "X ERROR: InvalidStudentDataException\n   Phone number format is invalid.\n   Expected formats: (123) 456-7890, 123-456-7890, 1234567890, etc.\n   You entered: " + phone
-                            );
-                        }
+                        // Validate phone using compiled regex patterns
+                        ValidationUtils.validatePhone(phone);
+                        System.out.println("Valid Phone Number");
                         System.out.println();
 
                         System.out.println("Student type:");
@@ -127,6 +118,8 @@ public class Main {
                         student.setGradeManager(gradeManager);
 
                         System.out.println("Student added successfully!");
+                        System.out.println("All inputs validated with regex patterns");
+                        System.out.println();
 
                         System.out.printf("Student ID: %s\n", student.getStudentId());
                         System.out.printf("Name: %s\n", student.getName());
@@ -149,9 +142,11 @@ public class Main {
                         scanner.nextLine(); // Clear invalid input
                         System.out.println();
                     } catch (InvalidMenuChoiceException e) {
+                        System.out.println();
                         System.out.println(e.getMessage());
                         System.out.println();
                     } catch (InvalidStudentDataException e) {
+                        System.out.println();
                         System.out.println(e.getMessage());
                         System.out.println();
                     }
@@ -318,16 +313,20 @@ public class Main {
                         System.out.println();
 
                         System.out.print("Enter grade (0-100): ");
-                        int gradeInput = 0;
-
+                        String gradeInputStr = scanner.nextLine();
+                        
+                        int gradeInput;
                         try {
-                            gradeInput = scanner.nextInt();
-                            scanner.nextLine();
-                        } catch (InputMismatchException e) {
-                            System.out.println(
-                                    "\nX ERROR: InvalidGradeException\n   Please enter a valid number (0-100).\n"
-                            );
-                            scanner.nextLine();
+                            // Validate grade format using compiled regex pattern
+                            ValidationUtils.validateGrade(gradeInputStr);
+                            
+                            gradeInput = Integer.parseInt(gradeInputStr);
+                            // Additional validation for range
+                            ValidationUtils.validateGrade(gradeInput);
+                        } catch (InvalidStudentDataException e) {
+                            System.out.println();
+                            System.out.println(e.getMessage());
+                            System.out.println();
                             break;
                         }
 
@@ -381,6 +380,7 @@ public class Main {
                         }
 
                     } catch (StudentNotFoundException | InvalidMenuChoiceException | InvalidGradeException e) {
+                        System.out.println();
                         System.out.println(e.getMessage());
                         System.out.println();
                     }
@@ -458,6 +458,7 @@ public class Main {
 
                         }
                     } catch (StudentNotFoundException e) {
+                        System.out.println();
                         System.out.println(e.getMessage());
                         System.out.println();
                     }
@@ -643,11 +644,13 @@ public class Main {
                             }
 
                         } catch (FileExportException e) {
+                            System.out.println();
                             System.out.println(e.getMessage());
                             System.out.println();
                         }
 
                     } catch (StudentNotFoundException e) {
+                        System.out.println();
                         System.out.println(e.getMessage());
                         System.out.println();
                     }
@@ -836,12 +839,15 @@ public class Main {
                         System.out.println();
 
                     } catch (InvalidFileFormatException e) {
+                        System.out.println();
                         System.out.println(e.getMessage());
                         System.out.println();
                     } catch (IOException e) {
+                        System.out.println();
                         System.out.println("X ERROR: CSVParseException\n   Failed to read CSV file: " + fileName + ".csv\n   Please check the file exists in ./imports/ directory.");
                         System.out.println();
                     } catch (Exception e) {
+                        System.out.println();
                         System.out.println("X ERROR: " + e.getClass().getSimpleName() + "\n   Error processing CSV file: " + e.getMessage());
                         System.out.println();
                     }
@@ -871,6 +877,7 @@ public class Main {
                         String gpaReport = gpaCalculator.generateGPAReport(studentId, student, studentManager);
                         System.out.println(gpaReport);
                     } catch (StudentNotFoundException e) {
+                        System.out.println();
                         System.out.println(e.getMessage());
                         System.out.println();
                     }
@@ -1112,6 +1119,7 @@ public class Main {
                             );
                         }
                     } catch (StudentNotFoundException | InvalidMenuChoiceException e) {
+                        System.out.println();
                         System.out.println(e.getMessage());
                         System.out.println();
                     }
