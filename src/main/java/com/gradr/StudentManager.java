@@ -2,55 +2,101 @@ package com.gradr;
 
 import com.gradr.exceptions.StudentNotFoundException;
 
+import java.util.*;
+
+/**
+ * StudentManager - Optimized with HashMap for O(1) student lookup by ID
+ * 
+ * Collection Optimization:
+ * - HashMap<String, Student>: O(1) average case lookup, insertion, and deletion
+ * - ArrayList<Student>: Maintains insertion order for iteration
+ */
 class StudentManager {
-    private Student[] students = new Student[50];
-    private int studentCount = 0;
+    // HashMap for O(1) student lookup by ID
+    // Time Complexity: O(1) average case for get, put, remove operations
+    private Map<String, Student> studentsMap = new HashMap<>();
+    
+    // ArrayList to maintain insertion order for iteration
+    // Time Complexity: O(1) amortized for add, O(n) for iteration
+    private List<Student> studentsList = new ArrayList<>();
 
-    // added student to the counter array
+    /**
+     * Add student to both HashMap and ArrayList
+     * Time Complexity: O(1) average case (HashMap put) + O(1) amortized (ArrayList add)
+     */
     public void addStudent(Student student) {
-        students[studentCount] = student;
-        studentCount++;
+        // O(1) average case - HashMap put operation
+        studentsMap.put(student.getStudentId(), student);
+        // O(1) amortized - ArrayList add operation
+        studentsList.add(student);
     }
 
+    /**
+     * Find student by ID using HashMap
+     * Time Complexity: O(1) average case (HashMap get operation)
+     * Previous implementation: O(n) linear search through array
+     */
     public Student findStudent(String studentId) throws StudentNotFoundException {
-        for (Student student : students) {
-            if (student == null) continue;
-
-            if (student.getStudentId().equals(studentId)) {
-                return student;
-            }
+        // O(1) average case - HashMap get operation
+        Student student = studentsMap.get(studentId);
+        
+        if (student == null) {
+            throw new StudentNotFoundException(
+                    "X ERROR: StudentNotFoundException\n   Student with ID '" + studentId + "' does not exist"
+            );
         }
-
-        throw new StudentNotFoundException(
-                "X ERROR: StudentNotFoundException\n   Student with ID '" + studentId + "' does not exist"
-        );
+        
+        return student;
     }
 
-
-    // Returns are students
+    /**
+     * View all students
+     * Time Complexity: O(n) where n is the number of students
+     */
     public void viewAllStudents() {
-        // return students; // Return type was Student[]
-        System.out.println(students.toString());
+        System.out.println(studentsList.toString());
     }
 
-    // produces the number of students
+    /**
+     * Get student count
+     * Time Complexity: O(1) - HashMap size operation
+     */
     public int getStudentCount() {
-        return studentCount;
+        return studentsMap.size();
     }
 
-    // Getter for students array
+    /**
+     * Get all students as array (for backward compatibility)
+     * Time Complexity: O(n) where n is the number of students
+     * @return Array of students maintaining insertion order
+     */
     public Student[] getStudents() {
-        return students;
+        // O(n) - Convert ArrayList to array
+        return studentsList.toArray(new Student[0]);
+    }
+    
+    /**
+     * Get all students as list (optimized version)
+     * Time Complexity: O(1) - Returns reference to list
+     * @return List of students maintaining insertion order
+     */
+    public List<Student> getStudentsList() {
+        return new ArrayList<>(studentsList); // Return copy to prevent external modification
     }
 
-    // Calculating the average grade for the whole class to be displayed in the option 2
-    // in the main menu
+    /**
+     * Calculate class average
+     * Time Complexity: O(n) where n is the number of students
+     */
     public double calculateClassAverage() {
+        if (studentsList.isEmpty()) {
+            return 0.0;
+        }
+        
         double totalAverage = 0;
-
-        // Calculating the average of all the students added
-        for (int i = 0; i < studentCount; i++) {
-            totalAverage += students[i].calculateAverageGrade();
+        // O(n) - Iterate through all students
+        for (Student student : studentsList) {
+            totalAverage += student.calculateAverageGrade();
         }
 
         return totalAverage / getStudentCount();

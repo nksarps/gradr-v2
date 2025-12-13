@@ -10,7 +10,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.InputMismatchException;
+import java.util.List;
 import java.util.Scanner;
 
 public class Main {
@@ -177,19 +179,22 @@ public class Main {
                         System.out.println("STU ID   | NAME                    | TYPE               | AVG GRADE         | STATUS                ");
                         System.out.println("----------------------------------------------------------------------------------------------------");
 
+                        // Use custom Comparator to sort students (O(n log n) operation)
+                        List<Student> sortedStudents = studentManager.getStudentsList();
+                        Collections.sort(sortedStudents, new StudentComparator());
+                        
                         if (studentCount <= 5) {
-                            for (int i = 0; i < studentCount; i++) {
-                                Student s = studentManager.getStudents()[i];
-
+                            // Display all students (sorted by Comparator)
+                            for (Student s : sortedStudents) {
                                 s.displayStudentDetails();
                                 System.out.println("----------------------------------------------------------------------------------------------------");
                             }
                         } else {
                             // Because I have to display 5 students if students are more than 5. 3 Regular students and
-                            // 2 honors students
-                            for (int i = 0; i < studentCount && studentDisplayCount < 5; i++) {
-                                Student s = studentManager.getStudents()[i];
-
+                            // 2 honors students (using sorted list from Comparator)
+                            for (Student s : sortedStudents) {
+                                if (studentDisplayCount >= 5) break;
+                                
                                 // Check student type to make sure it displays five students
                                 // 3 Regular and 2 Honors
                                 if (s.getStudentType().equals("Regular") && regularStudentsDisplayCount < 3) {
@@ -349,6 +354,17 @@ public class Main {
 
                             if (confirmGrade == 'Y' || confirmGrade == 'y') {
                                 gradeManager.addGrade(grade);
+                                
+                                // Update GPA rankings using TreeMap (O(log n) operation)
+                                GPACalculator gpaCalc = new GPACalculator(gradeManager);
+                                double gpa = gpaCalc.calculateCumulativeGPA(studentId);
+                                gradeManager.updateGPARanking(student, gpa);
+                                
+                                // Schedule task for grade processing (PriorityQueue - O(log n))
+                                Task gradeTask = new Task(Task.TaskType.GRADE_PROCESSING, 
+                                        "Process grade for " + student.getName(), studentId);
+                                gradeManager.scheduleTask(gradeTask);
+                                
                                 System.out.println("Grade added successfully.\n");
                             } else if (confirmGrade == 'N' || confirmGrade == 'n') {
                                 Grade.gradeCounter--;
