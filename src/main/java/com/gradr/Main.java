@@ -52,60 +52,42 @@ public class Main {
                         System.out.println("_______________________________________________");
                         System.out.println();
 
-                        // Validate student name using ValidationUtils
-                        String name;
-                        ValidationUtils.ValidationResult nameResult;
-                        do {
-                            System.out.print("Enter Student Name: ");
-                            name = scanner.nextLine();
-                            nameResult = ValidationUtils.validateName(name);
-                            System.out.println(nameResult.getMessage());
-                            if (!nameResult.isValid()) {
-                                System.out.println();
-                            }
-                        } while (!nameResult.isValid());
+                        System.out.print("Enter student name: ");
+                        String name = scanner.nextLine();
+                        // Validate name using compiled regex pattern
+                        ValidationUtils.validateName(name);
+                        System.out.println("Valid Student Name");
 
-                        // Validate age using ValidationUtils
-                        String ageInput;
-                        ValidationUtils.ValidationResult ageResult;
-                        do {
-                            System.out.print("Enter Student Age: ");
-                            ageInput = scanner.nextLine();
-                            ageResult = ValidationUtils.validateAge(ageInput);
-                            System.out.println(ageResult.getMessage());
-                            if (!ageResult.isValid()) {
-                                System.out.println();
-                            }
-                        } while (!ageResult.isValid());
+                        System.out.print("Enter student age: ");
+                        String ageInput = scanner.nextLine();
                         
-                        int age = Integer.parseInt(ageInput);
-
-                        // Validate email using ValidationUtils
-                        String email;
-                        ValidationUtils.ValidationResult emailResult;
-                        do {
-                            System.out.print("Enter Email Address: ");
-                            email = scanner.nextLine();
-                            emailResult = ValidationUtils.validateEmail(email);
-                            System.out.println(emailResult.getMessage());
-                            if (!emailResult.isValid()) {
-                                System.out.println();
+                        // Validate age format and range
+                        int age;
+                        try {
+                            age = Integer.parseInt(ageInput);
+                            // Age should be between 5 and 100 (reasonable student age range)
+                            if (age < 5 || age > 100) {
+                                throw new InvalidStudentDataException(
+                                        "X ERROR: InvalidStudentDataException\n   Age must be between 5 and 100.\n   You entered: " + ageInput
+                                );
                             }
-                        } while (!emailResult.isValid());
+                        } catch (NumberFormatException e) { // if the user entered a non-number age
+                            throw new InvalidStudentDataException(
+                                    "X VALIDATION ERROR: Invalid age format\n   Age must be a valid number.\n   You entered: " + ageInput
+                            );
+                        }
 
-                        // Validate phone using ValidationUtils
-                        String phone;
-                        ValidationUtils.ValidationResult phoneResult;
-                        do {
-                            System.out.print("Enter Phone Number: ");
-                            phone = scanner.nextLine();
-                            phoneResult = ValidationUtils.validatePhone(phone);
-                            System.out.println(phoneResult.getMessage());
-                            if (!phoneResult.isValid()) {
-                                System.out.println();
-                            }
-                        } while (!phoneResult.isValid());
-                        
+                        System.out.print("Enter student email: ");
+                        String email = scanner.nextLine();
+                        // Validate email using compiled regex pattern
+                        ValidationUtils.validateEmail(email);
+                        System.out.println("Valid Email Address");
+
+                        System.out.print("Enter student phone: ");
+                        String phone = scanner.nextLine();
+                        // Validate phone using compiled regex patterns
+                        ValidationUtils.validatePhone(phone);
+                        System.out.println("Valid Phone Number");
                         System.out.println();
 
                         System.out.println("Student type:");
@@ -138,12 +120,12 @@ public class Main {
                         System.out.println("Student added successfully!");
                         System.out.println("All inputs validated with regex patterns");
                         System.out.println();
+
                         System.out.printf("Student ID: %s\n", student.getStudentId());
                         System.out.printf("Name: %s\n", student.getName());
                         System.out.printf("Type: %s\n", student.getStudentType());
                         System.out.printf("Age: %d\n", student.getAge());
                         System.out.printf("Email: %s\n", student.getEmail());
-                        System.out.printf("Phone: %s\n", student.getPhone());
                         System.out.printf("Passing Grade: %d%%\n", (int) student.getPassingGrade());
 
                         if (student.getStudentType().equals("Honors")) {
@@ -160,6 +142,11 @@ public class Main {
                         scanner.nextLine(); // Clear invalid input
                         System.out.println();
                     } catch (InvalidMenuChoiceException e) {
+                        System.out.println();
+                        System.out.println(e.getMessage());
+                        System.out.println();
+                    } catch (InvalidStudentDataException e) {
+                        System.out.println();
                         System.out.println(e.getMessage());
                         System.out.println();
                     }
@@ -325,21 +312,23 @@ public class Main {
 
                         System.out.println();
 
-                        // Validate grade using ValidationUtils
-                        String gradeInputStr;
-                        ValidationUtils.ValidationResult gradeResult;
-                        int gradeInput = 0;
-                        do {
-                            System.out.print("Enter grade (0-100): ");
-                            gradeInputStr = scanner.nextLine();
-                            gradeResult = ValidationUtils.validateGrade(gradeInputStr);
-                            System.out.println(gradeResult.getMessage());
-                            if (!gradeResult.isValid()) {
-                                System.out.println();
-                            } else {
-                                gradeInput = Integer.parseInt(gradeInputStr);
-                            }
-                        } while (!gradeResult.isValid());
+                        System.out.print("Enter grade (0-100): ");
+                        String gradeInputStr = scanner.nextLine();
+                        
+                        int gradeInput;
+                        try {
+                            // Validate grade format using compiled regex pattern
+                            ValidationUtils.validateGrade(gradeInputStr);
+                            
+                            gradeInput = Integer.parseInt(gradeInputStr);
+                            // Additional validation for range
+                            ValidationUtils.validateGrade(gradeInput);
+                        } catch (InvalidStudentDataException e) {
+                            System.out.println();
+                            System.out.println(e.getMessage());
+                            System.out.println();
+                            break;
+                        }
 
                         grade = new Grade(studentId, subject, gradeInput);
 
@@ -391,6 +380,7 @@ public class Main {
                         }
 
                     } catch (StudentNotFoundException | InvalidMenuChoiceException | InvalidGradeException e) {
+                        System.out.println();
                         System.out.println(e.getMessage());
                         System.out.println();
                     }
@@ -468,6 +458,7 @@ public class Main {
 
                         }
                     } catch (StudentNotFoundException e) {
+                        System.out.println();
                         System.out.println(e.getMessage());
                         System.out.println();
                     }
@@ -653,11 +644,13 @@ public class Main {
                             }
 
                         } catch (FileExportException e) {
+                            System.out.println();
                             System.out.println(e.getMessage());
                             System.out.println();
                         }
 
                     } catch (StudentNotFoundException e) {
+                        System.out.println();
                         System.out.println(e.getMessage());
                         System.out.println();
                     }
@@ -846,12 +839,15 @@ public class Main {
                         System.out.println();
 
                     } catch (InvalidFileFormatException e) {
+                        System.out.println();
                         System.out.println(e.getMessage());
                         System.out.println();
                     } catch (IOException e) {
+                        System.out.println();
                         System.out.println("X ERROR: CSVParseException\n   Failed to read CSV file: " + fileName + ".csv\n   Please check the file exists in ./imports/ directory.");
                         System.out.println();
                     } catch (Exception e) {
+                        System.out.println();
                         System.out.println("X ERROR: " + e.getClass().getSimpleName() + "\n   Error processing CSV file: " + e.getMessage());
                         System.out.println();
                     }
@@ -881,6 +877,7 @@ public class Main {
                         String gpaReport = gpaCalculator.generateGPAReport(studentId, student, studentManager);
                         System.out.println(gpaReport);
                     } catch (StudentNotFoundException e) {
+                        System.out.println();
                         System.out.println(e.getMessage());
                         System.out.println();
                     }
@@ -1122,6 +1119,7 @@ public class Main {
                             );
                         }
                     } catch (StudentNotFoundException | InvalidMenuChoiceException e) {
+                        System.out.println();
                         System.out.println(e.getMessage());
                         System.out.println();
                     }
