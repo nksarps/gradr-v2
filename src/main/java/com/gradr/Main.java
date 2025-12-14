@@ -39,6 +39,10 @@ public class Main {
         final TaskScheduler[] taskSchedulerRef = new TaskScheduler[1];
         boolean schedulerInitialized = false;
         
+        // Statistics dashboard (initialized on first use)
+        // Use array to allow tracking across menu displays
+        final StatisticsDashboard[] dashboardRef = new StatisticsDashboard[1];
+        
         // Add shutdown hook to properly close scheduler, cache, and audit logger
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             if (taskSchedulerRef[0] != null) {
@@ -56,7 +60,7 @@ public class Main {
         String studentId;
 
         do {
-            displayMainMenu();
+            displayMainMenu(taskSchedulerRef[0], dashboardRef[0]);
 
             // Checking if the user entered a valid number between 1 and 19
             try {
@@ -1168,6 +1172,7 @@ public class Main {
                 case 10:
                     try {
                         StatisticsDashboard dashboard = new StatisticsDashboard(studentManager, gradeManager);
+                        dashboardRef[0] = dashboard; // Store reference for menu display
                         // Register thread pool with performance monitor
                         performanceMonitor.registerThreadPool("CachedThreadPool", 
                             dashboard.getExecutorService(), dashboard.getMaxThreadCount());
@@ -3041,7 +3046,7 @@ public class Main {
     }
 
     // Class for displaying the Main Menu
-    public static void displayMainMenu() {
+    public static void displayMainMenu(TaskScheduler taskScheduler, StatisticsDashboard dashboard) {
         System.out.println("||=============================================================||");
         System.out.println("||             STUDENT GRADE MANAGEMENT - MAIN MENU            ||");
         System.out.println("||=============================================================||");
@@ -3083,8 +3088,21 @@ public class Main {
         System.out.println("19. Exit");
         System.out.println();
         
-        // Display background tasks status (placeholder for future implementation)
-        System.out.println("Background Tasks: ⚡ 0 active | 📊 Stats updating...");
+        // Display background tasks status with real data
+        int activeTasks = 0;
+        String statsStatus = "idle";
+        
+        // Count active scheduled tasks
+        if (taskScheduler != null) {
+            activeTasks = taskScheduler.getActiveTasks().size();
+        }
+        
+        // Check statistics dashboard status
+        if (dashboard != null && dashboard.isRunning()) {
+            statsStatus = dashboard.isPaused() ? "paused" : "updating";
+        }
+        
+        System.out.printf("Background Tasks: ⚡ %d active | 📊 Stats %s%n", activeTasks, statsStatus);
         System.out.println();
     }
 }
