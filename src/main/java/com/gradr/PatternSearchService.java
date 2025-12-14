@@ -305,4 +305,3 @@ public class PatternSearchService {
         public String getRegexPattern() { return regexPattern; }
     }
 }
-
