@@ -2030,6 +2030,8 @@ public class Main {
                             schedulerInitialized = true;
                             // Register thread pool with performance monitor (ScheduledPool uses 3 threads)
                             performanceMonitor.registerThreadPool("ScheduledPool", null, 3);
+                            // Set TaskScheduler reference for task count tracking
+                            performanceMonitor.setTaskScheduler(taskSchedulerRef[0]);
                         }
                         
                         TaskScheduler taskScheduler = taskSchedulerRef[0];
@@ -2313,72 +2315,22 @@ public class Main {
                     break;
                 case 16:
                     try {
-                        System.out.println("VIEW SYSTEM PERFORMANCE");
-                        System.out.println("_______________________________________________");
-                        System.out.println();
-                        
-                        System.out.println("Performance Monitor Options:");
-                        System.out.println("1. Resource Utilization");
-                        System.out.println("2. System Performance Monitor");
-                        System.out.println("3. Detailed Performance Metrics");
-                        System.out.println("4. Return to Main Menu");
-                        System.out.println();
-                        
-                        System.out.print("Select option (1-4): ");
-                        int perfOption;
-                        try {
-                            perfOption = scanner.nextInt();
-                            scanner.nextLine();
-                        } catch (InputMismatchException e) {
-                            System.out.println("\nX ERROR: InvalidMenuChoiceException\n   Please enter a valid number (1-4).\n");
-                            scanner.nextLine();
-                            break;
-                        }
-                        
-                        System.out.println();
-                        
-                        switch (perfOption) {
-                            case 1:
-                                // Resource Utilization View
-                                performanceMonitor.displayResourceUtilization();
-                                System.out.print("Press Enter to continue...");
-                                scanner.nextLine();
-                                break;
-                                
-                            case 2:
-                                // System Performance Monitor (interactive)
-                                boolean monitoring = true;
-                                while (monitoring) {
-                                    performanceMonitor.displaySystemPerformance();
-                                    System.out.print("Press 'Q' to quit, 'R' to refresh: ");
-                                    String input = scanner.nextLine().trim().toUpperCase();
-                                    if (input.equals("Q")) {
-                                        monitoring = false;
-                                    }
-                                    // Refresh automatically after 2 seconds if 'R' or any other key
-                                    try {
-                                        Thread.sleep(2000);
-                                    } catch (InterruptedException e) {
-                                        Thread.currentThread().interrupt();
-                                        monitoring = false;
-                                    }
-                                }
-                                break;
-                                
-                            case 3:
-                                // Detailed Performance Metrics
-                                performanceMonitor.displayDetailedPerformance();
-                                System.out.print("Press Enter to continue...");
-                                scanner.nextLine();
-                                break;
-                                
-                            case 4:
-                                // Return to main menu
-                                break;
-                                
-                            default:
-                                System.out.println("X ERROR: InvalidMenuChoiceException\n   Please enter a valid option (1-4).\n");
-                                break;
+                        // System Performance Monitor (interactive)
+                        boolean monitoring = true;
+                        while (monitoring) {
+                            performanceMonitor.displaySystemPerformance();
+                            System.out.print("Press 'Q' to quit, 'R' to refresh: ");
+                            String input = scanner.nextLine().trim().toUpperCase();
+                            if (input.equals("Q")) {
+                                monitoring = false;
+                            }
+                            // Refresh automatically after 2 seconds if 'R' or any other key
+                            try {
+                                Thread.sleep(2000);
+                            } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                                monitoring = false;
+                            }
                         }
                         System.out.println();
                     } catch (Exception e) {
