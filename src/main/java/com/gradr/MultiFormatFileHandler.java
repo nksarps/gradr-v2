@@ -23,6 +23,11 @@ import java.util.stream.Collectors;
  * - Support for relative and absolute paths
  * - UTF-8 encoding for text files
  * - Try-with-resources for proper resource management
+ * 
+ * Thread Safety:
+ * - All file write operations (exportToCSV, exportToJSON, exportToBinary) are synchronized
+ * - Prevents concurrent write conflicts when multiple threads access the same file handler
+ * - File locking should be used at the application level for additional protection
  */
 public class MultiFormatFileHandler {
     
@@ -96,8 +101,9 @@ public class MultiFormatFileHandler {
      * Export student report to CSV format with streaming
      * Uses NIO.2 Files.newBufferedWriter for efficient streaming
      * Time Complexity: O(n) where n is the number of grades
+     * Thread-safe: Synchronized to prevent concurrent write conflicts
      */
-    public Path exportToCSV(StudentReport report, String fileName) throws FileExportException {
+    public synchronized Path exportToCSV(StudentReport report, String fileName) throws FileExportException {
         long startTime = System.nanoTime();
         // Use Paths.get() or Path.of() for path creation
         Path filePath = CSV_DIR.resolve(fileName + ".csv");
@@ -152,8 +158,9 @@ public class MultiFormatFileHandler {
      * Export student report to JSON format
      * Uses NIO.2 Files.writeString for UTF-8 encoding
      * Time Complexity: O(n) where n is the number of grades
+     * Thread-safe: Synchronized to prevent concurrent write conflicts
      */
-    public Path exportToJSON(StudentReport report, String fileName) throws FileExportException {
+    public synchronized Path exportToJSON(StudentReport report, String fileName) throws FileExportException {
         long startTime = System.nanoTime();
         Path filePath = JSON_DIR.resolve(fileName + ".json");
         
@@ -218,8 +225,9 @@ public class MultiFormatFileHandler {
      * Smaller file sizes than text formats
      * Uses NIO.2 Files.newOutputStream for efficient binary writing
      * Time Complexity: O(n) where n is the size of the serialized object
+     * Thread-safe: Synchronized to prevent concurrent write conflicts
      */
-    public Path exportToBinary(StudentReport report, String fileName) throws FileExportException {
+    public synchronized Path exportToBinary(StudentReport report, String fileName) throws FileExportException {
         long startTime = System.nanoTime();
         // Use Paths.get() or Path.of() for path creation
         Path filePath = BINARY_DIR.resolve(fileName + ".dat");
