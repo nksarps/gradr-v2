@@ -144,6 +144,10 @@ public class Main {
 
                         // Adding a student to the array
                         studentManager.addStudent(student);
+                        
+                        // Cache the new student
+                        String cacheKey = "student:" + student.getStudentId();
+                        cacheManager.put(cacheKey, student, CacheManager.CacheType.STUDENT);
 
                         // Setting grade manager after creating student to be able to access the student's grades
                         //  inside the student class
@@ -252,7 +256,16 @@ public class Main {
                     System.out.println();
 
                     try {
-                        student = studentManager.findStudent(studentId);
+                        // Try cache first
+                        String cacheKey = "student:" + studentId;
+                        Student cachedStudent = (Student) cacheManager.get(cacheKey);
+                        if (cachedStudent != null) {
+                            student = cachedStudent; // Cache hit
+                        } else {
+                            // Cache miss - fetch and cache
+                            student = studentManager.findStudent(studentId);
+                            cacheManager.put(cacheKey, student, CacheManager.CacheType.STUDENT);
+                        }
 
                         System.out.println("Student Details:");
                         System.out.printf("Name: %s\n", student.getName());
@@ -384,6 +397,10 @@ public class Main {
                             if (confirmGrade == 'Y' || confirmGrade == 'y') {
                                 gradeManager.addGrade(grade);
                                 
+                                // Invalidate caches for this student (grades changed)
+                                cacheManager.invalidateByType(CacheManager.CacheType.GRADE_REPORT);
+                                cacheManager.invalidateByType(CacheManager.CacheType.STATISTICS);
+
                                 // Update GPA rankings using TreeMap (O(log n) operation)
                                 GPACalculator gpaCalc = new GPACalculator(gradeManager);
                                 double gpa = gpaCalc.calculateCumulativeGPA(studentId);
@@ -430,7 +447,16 @@ public class Main {
                     // Get student using ID and display student grade report
 
                     try {
-                        student = studentManager.findStudent(studentId);
+                        // Try cache first
+                        String cacheKey = "student:" + studentId;
+                        Student cachedStudent = (Student) cacheManager.get(cacheKey);
+                        if (cachedStudent != null) {
+                            student = cachedStudent; // Cache hit
+                        } else {
+                            // Cache miss - fetch and cache
+                            student = studentManager.findStudent(studentId);
+                            cacheManager.put(cacheKey, student, CacheManager.CacheType.STUDENT);
+                        }
 
                         //If there is a student associated with the ID, continue, else
                         // throw an error 
@@ -506,7 +532,16 @@ public class Main {
                     System.out.println();
 
                     try {
-                        student = studentManager.findStudent(studentId);
+                        // Try cache first
+                        String cacheKey = "student:" + studentId;
+                        Student cachedStudent = (Student) cacheManager.get(cacheKey);
+                        if (cachedStudent != null) {
+                            student = cachedStudent; // Cache hit
+                        } else {
+                            // Cache miss - fetch and cache
+                            student = studentManager.findStudent(studentId);
+                            cacheManager.put(cacheKey, student, CacheManager.CacheType.STUDENT);
+                        }
 
                         System.out.printf("Student: %s - %s", student.getStudentId(), student.getName());
                         if (student.getEmail() != null) {
@@ -572,28 +607,37 @@ public class Main {
                         System.out.println();
 
                         try {
-                            // Build StudentReport
-                            double overallAverage = student.calculateAverageGrade();
-                            StudentReport report = new StudentReport(
-                                student.getStudentId(),
-                                student.getName(),
-                                student.getStudentType(),
-                                overallAverage,
-                                reportType
-                            );
+                            // Try to get cached report first
+                            String reportCacheKey = "report:" + studentId + ":" + reportType;
+                            StudentReport report = (StudentReport) cacheManager.get(reportCacheKey);
+                            
+                            if (report == null) {
+                                // Cache miss - build report
+                                double overallAverage = student.calculateAverageGrade();
+                                report = new StudentReport(
+                                    student.getStudentId(),
+                                    student.getName(),
+                                    student.getStudentType(),
+                                    overallAverage,
+                                    reportType
+                                );
 
-                            // Add all grades to report
-                            for (Grade studentGrade : gradeManager.getGrades()) {
-                                if (studentGrade != null && studentGrade.getStudentId().equals(studentId)) {
-                                    GradeData gradeData = new GradeData(
-                                        studentGrade.getGradeId(),
-                                        studentGrade.getDate(),
-                                        studentGrade.getSubject().getSubjectName(),
-                                        studentGrade.getSubject().getSubjectType(),
-                                        studentGrade.getGrade()
-                                    );
-                                    report.addGrade(gradeData);
+                                // Add all grades to report
+                                for (Grade studentGrade : gradeManager.getGrades()) {
+                                    if (studentGrade != null && studentGrade.getStudentId().equals(studentId)) {
+                                        GradeData gradeData = new GradeData(
+                                            studentGrade.getGradeId(),
+                                            studentGrade.getDate(),
+                                            studentGrade.getSubject().getSubjectName(),
+                                            studentGrade.getSubject().getSubjectType(),
+                                            studentGrade.getGrade()
+                                        );
+                                        report.addGrade(gradeData);
+                                    }
                                 }
+                                
+                                // Cache the report
+                                cacheManager.put(reportCacheKey, report, CacheManager.CacheType.GRADE_REPORT);
                             }
 
                             // Generate filename with student name
@@ -842,6 +886,11 @@ public class Main {
                                             // Create and add grade
                                             Grade newGrade = new Grade(csvStudentId, csvSubject, gradeValue);
                                             gradeManager.addGrade(newGrade);
+                                            
+                                            // Invalidate caches (grades changed)
+                                            cacheManager.invalidateByType(CacheManager.CacheType.GRADE_REPORT);
+                                            cacheManager.invalidateByType(CacheManager.CacheType.STATISTICS);
+                                            
                                             successCount++;
                                             
                                         } catch (NumberFormatException e) {
@@ -1050,6 +1099,11 @@ public class Main {
                                 if (newGrade.recordGrade(gradeValue)) {
                                     newGrade.setGradeId();
                                     gradeManager.addGrade(newGrade);
+                                    
+                                    // Invalidate caches (grades changed)
+                                    cacheManager.invalidateByType(CacheManager.CacheType.GRADE_REPORT);
+                                    cacheManager.invalidateByType(CacheManager.CacheType.STATISTICS);
+                                    
                                     successCount++;
                                 } else {
                                     failCount++;
@@ -1140,7 +1194,16 @@ public class Main {
                     System.out.println();
 
                     try {
-                        student = studentManager.findStudent(studentId);
+                        // Try cache first
+                        String cacheKey = "student:" + studentId;
+                        Student cachedStudent = (Student) cacheManager.get(cacheKey);
+                        if (cachedStudent != null) {
+                            student = cachedStudent; // Cache hit
+                        } else {
+                            // Cache miss - fetch and cache
+                            student = studentManager.findStudent(studentId);
+                            cacheManager.put(cacheKey, student, CacheManager.CacheType.STUDENT);
+                        }
 
                         // Check if student has any grades
                         if (student.getEnrolledSubjectsCount() == 0) {
@@ -1172,9 +1235,18 @@ public class Main {
                         break;
                     }
 
-                    // Create ClassStatistics instance and generate report
-                    StatisticsCalculator classStats = new StatisticsCalculator(gradeManager, studentManager);
-                    String statsReport = classStats.generateClassStatistics();
+                    // Try to get cached statistics first
+                    String statsCacheKey = "statistics:class";
+                    String statsReport = (String) cacheManager.get(statsCacheKey);
+                    
+                    if (statsReport == null) {
+                        // Cache miss - calculate statistics
+                        StatisticsCalculator classStats = new StatisticsCalculator(gradeManager, studentManager);
+                        statsReport = classStats.generateClassStatistics();
+                        // Cache the statistics report
+                        cacheManager.put(statsCacheKey, statsReport, CacheManager.CacheType.STATISTICS);
+                    }
+                    
                     System.out.println(statsReport);
 
                     break;
@@ -2845,6 +2917,11 @@ public class Main {
                     Grade newGrade = new Grade(reportStudentId, reportSubject, gradeData.getGrade());
                     newGrade.setGradeId();
                     gradeManager.addGrade(newGrade);
+                    
+                    // Invalidate caches (grades changed)
+                    cacheManager.invalidateByType(CacheManager.CacheType.GRADE_REPORT);
+                    cacheManager.invalidateByType(CacheManager.CacheType.STATISTICS);
+                    
                     importedCount++;
                 } else {
                     System.out.println("⚠ Grade for " + gradeData.getSubjectName() + " (" + gradeData.getSubjectType() + ") already exists for student " + reportStudentId + ", skipping");
@@ -3066,3 +3143,4 @@ public class Main {
         System.out.println();
     }
 }
+

@@ -1,0 +1,12 @@
+Grade ID,Date,Subject,Type,Grade
+GRD001,2025-12-16,Mathematics,Core,85.0
+GRD002,2025-12-16,English,Core,92.0
+GRD003,2025-12-16,Science,Core,87.0
+GRD004,2025-12-16,Music,Elective,88.0
+GRD005,2025-12-16,Art,Elective,89.0
+
+Summary,Student ID,STU001
+Summary,Name,nana
+Summary,Type,Regular
+Summary,Overall Average,88.20
+Summary,Total Grades,5
