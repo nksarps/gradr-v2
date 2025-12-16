@@ -1,9 +1,0 @@
-BULK IMPORT LOG
-_______________________________________________
-
-Source File: student_one_grades.csv
-Import Date: 2025-12-16
-Total Rows: 5
-Successfully Imported: 5
-Failed: 0
-
