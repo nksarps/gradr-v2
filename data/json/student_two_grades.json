@@ -1,0 +1,32 @@
+[
+  {
+    "studentId": "STU002",
+    "subjectName": "Mathematics",
+    "subjectType": "Core",
+    "grade": 78.0
+  },
+  {
+    "studentId": "STU002",
+    "subjectName": "English",
+    "subjectType": "Core",
+    "grade": 85.0
+  },
+  {
+    "studentId": "STU002",
+    "subjectName": "Science",
+    "subjectType": "Core",
+    "grade": 82.0
+  },
+  {
+    "studentId": "STU002",
+    "subjectName": "Music",
+    "subjectType": "Elective",
+    "grade": 90.0
+  },
+  {
+    "studentId": "STU002",
+    "subjectName": "Art",
+    "subjectType": "Elective",
+    "grade": 88.0
+  }
+]
