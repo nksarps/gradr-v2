@@ -938,7 +938,7 @@ public class Main {
                                     System.out.println("✓ JSON file parsed successfully");
                                     
                                     // Process imported report
-                                    int jsonImportedCount = processImportedReport(importedReport, studentManager, gradeManager);
+                                    int jsonImportedCount = processImportedReport(importedReport, studentManager, gradeManager, cacheManager);
                                     
                                     long jsonImportTime = System.currentTimeMillis() - importStartTime;
                                     
@@ -961,7 +961,7 @@ public class Main {
                                     System.out.println("✓ Binary file parsed successfully");
                                     
                                     // Process imported report
-                                    int binaryImportedCount = processImportedReport(importedReport, studentManager, gradeManager);
+                                    int binaryImportedCount = processImportedReport(importedReport, studentManager, gradeManager, cacheManager);
                                     
                                     long binaryImportTime = System.currentTimeMillis() - importStartTime;
                                     
@@ -2855,7 +2855,7 @@ public class Main {
      * Process imported StudentReport and add grades to the system
      * @return Number of grades successfully imported
      */
-    private static int processImportedReport(StudentReport report, StudentManager studentManager, GradeManager gradeManager) {
+    private static int processImportedReport(StudentReport report, StudentManager studentManager, GradeManager gradeManager, CacheManager cacheManager) {
         if (report == null) {
             return 0;
         }
