@@ -381,68 +381,170 @@ public class MultiFormatFileHandler {
     /**
      * Parse JSON content into StudentReport
      * Simple JSON parser for our specific format
+     * Supports two formats:
+     * 1. Full format with student info and grades array
+     * 2. Simple CSV-like format with array of records (studentId, subjectName, subjectType, grade)
      */
     private StudentReport parseJSONReport(String jsonContent) throws FileExportException {
         try {
             // Remove whitespace and newlines for easier parsing
             String cleaned = jsonContent.replaceAll("\\s+", " ").trim();
             
-            // Extract student info
-            String studentId = extractJSONValue(cleaned, "\"id\"");
-            String studentName = extractJSONValue(cleaned, "\"name\"");
-            String studentType = extractJSONValue(cleaned, "\"type\"");
-            double overallAverage = Double.parseDouble(extractJSONValue(cleaned, "\"overallAverage\""));
+            // Check if this is a simple array format (CSV-like) or full format
+            boolean isSimpleFormat = cleaned.startsWith("[") || 
+                                    (cleaned.indexOf("\"studentId\"") != -1 && cleaned.indexOf("\"grades\"") == -1);
             
-            // Create report
-            StudentReport report = new StudentReport(
-                studentId, studentName, studentType, overallAverage, "Imported"
-            );
-            
-            // Extract grades array
-            int gradesStart = cleaned.indexOf("\"grades\"");
-            if (gradesStart == -1) {
-                return report; // No grades
+            if (isSimpleFormat) {
+                // Simple CSV-like format: array of records with studentId, subjectName, subjectType, grade
+                return parseSimpleJSONFormat(cleaned);
+            } else {
+                // Full format with student info and grades array
+                return parseFullJSONFormat(cleaned);
             }
-            
-            int arrayStart = cleaned.indexOf("[", gradesStart);
-            int arrayEnd = cleaned.lastIndexOf("]");
-            
-            if (arrayStart == -1 || arrayEnd == -1) {
-                return report; // Empty grades array
-            }
-            
-            String gradesArray = cleaned.substring(arrayStart + 1, arrayEnd);
-            
-            // Parse each grade object
-            int pos = 0;
-            while (pos < gradesArray.length()) {
-                int objStart = gradesArray.indexOf("{", pos);
-                if (objStart == -1) break;
-                
-                int objEnd = findMatchingBrace(gradesArray, objStart);
-                if (objEnd == -1) break;
-                
-                String gradeObj = gradesArray.substring(objStart, objEnd + 1);
-                
-                String gradeId = extractJSONValue(gradeObj, "\"gradeId\"");
-                String date = extractJSONValue(gradeObj, "\"date\"");
-                String subject = extractJSONValue(gradeObj, "\"subject\"");
-                String type = extractJSONValue(gradeObj, "\"type\"");
-                double grade = Double.parseDouble(extractJSONValue(gradeObj, "\"grade\""));
-                
-                GradeData gradeData = new GradeData(gradeId, date, subject, type, grade);
-                report.addGrade(gradeData);
-                
-                pos = objEnd + 1;
-            }
-            
-            return report;
             
         } catch (Exception e) {
             throw new FileExportException(
                 "X ERROR: FileExportException\n   Failed to parse JSON: " + e.getMessage()
             );
         }
+    }
+    
+    /**
+     * Parse simple CSV-like JSON format: array of records
+     * Each record has: studentId, subjectName, subjectType, grade
+     */
+    private StudentReport parseSimpleJSONFormat(String cleaned) throws FileExportException {
+        // Find the main array
+        int arrayStart = cleaned.indexOf("[");
+        int arrayEnd = cleaned.lastIndexOf("]");
+        
+        if (arrayStart == -1 || arrayEnd == -1) {
+            throw new FileExportException("Invalid JSON format: expected array");
+        }
+        
+        String gradesArray = cleaned.substring(arrayStart + 1, arrayEnd);
+        
+        String firstStudentId = null;
+        List<GradeData> gradeDataList = new ArrayList<>();
+        double totalGrade = 0.0;
+        int gradeCount = 0;
+        
+        // Parse each record object
+        int pos = 0;
+        while (pos < gradesArray.length()) {
+            int objStart = gradesArray.indexOf("{", pos);
+            if (objStart == -1) break;
+            
+            int objEnd = findMatchingBrace(gradesArray, objStart);
+            if (objEnd == -1) break;
+            
+            String recordObj = gradesArray.substring(objStart, objEnd + 1);
+            
+            // Extract fields: studentId, subjectName, subjectType, grade
+            String studentId = extractJSONValue(recordObj, "\"studentId\"");
+            String subjectName = extractJSONValue(recordObj, "\"subjectName\"");
+            String subjectType = extractJSONValue(recordObj, "\"subjectType\"");
+            String gradeStr = extractJSONValue(recordObj, "\"grade\"");
+            
+            if (studentId.isEmpty() || subjectName.isEmpty() || subjectType.isEmpty() || gradeStr.isEmpty()) {
+                pos = objEnd + 1;
+                continue; // Skip invalid records
+            }
+            
+            // Store first studentId for the report
+            if (firstStudentId == null) {
+                firstStudentId = studentId;
+            }
+            
+            double grade = Double.parseDouble(gradeStr);
+            totalGrade += grade;
+            gradeCount++;
+            
+            // Generate gradeId and date (required by GradeData)
+            String gradeId = "GRD" + String.format("%03d", gradeCount);
+            String date = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+            
+            GradeData gradeData = new GradeData(gradeId, date, subjectName, subjectType, grade);
+            gradeDataList.add(gradeData);
+            
+            pos = objEnd + 1;
+        }
+        
+        if (firstStudentId == null || gradeDataList.isEmpty()) {
+            throw new FileExportException("No valid grade records found in JSON");
+        }
+        
+        // Calculate average
+        double overallAverage = gradeCount > 0 ? totalGrade / gradeCount : 0.0;
+        
+        // Create report with default values (will be looked up from studentManager during import)
+        StudentReport report = new StudentReport(
+            firstStudentId, "Unknown", "Regular", overallAverage, "Imported"
+        );
+        
+        // Add all grades
+        for (GradeData gradeData : gradeDataList) {
+            report.addGrade(gradeData);
+        }
+        
+        return report;
+    }
+    
+    /**
+     * Parse full JSON format with student info and grades array
+     */
+    private StudentReport parseFullJSONFormat(String cleaned) throws FileExportException {
+        // Extract student info
+        String studentId = extractJSONValue(cleaned, "\"id\"");
+        String studentName = extractJSONValue(cleaned, "\"name\"");
+        String studentType = extractJSONValue(cleaned, "\"type\"");
+        String avgStr = extractJSONValue(cleaned, "\"overallAverage\"");
+        double overallAverage = avgStr.isEmpty() ? 0.0 : Double.parseDouble(avgStr);
+        
+        // Create report
+        StudentReport report = new StudentReport(
+            studentId, studentName, studentType, overallAverage, "Imported"
+        );
+        
+        // Extract grades array
+        int gradesStart = cleaned.indexOf("\"grades\"");
+        if (gradesStart == -1) {
+            return report; // No grades
+        }
+        
+        int arrayStart = cleaned.indexOf("[", gradesStart);
+        int arrayEnd = cleaned.lastIndexOf("]");
+        
+        if (arrayStart == -1 || arrayEnd == -1) {
+            return report; // Empty grades array
+        }
+        
+        String gradesArray = cleaned.substring(arrayStart + 1, arrayEnd);
+        
+        // Parse each grade object
+        int pos = 0;
+        while (pos < gradesArray.length()) {
+            int objStart = gradesArray.indexOf("{", pos);
+            if (objStart == -1) break;
+            
+            int objEnd = findMatchingBrace(gradesArray, objStart);
+            if (objEnd == -1) break;
+            
+            String gradeObj = gradesArray.substring(objStart, objEnd + 1);
+            
+            String gradeId = extractJSONValue(gradeObj, "\"gradeId\"");
+            String date = extractJSONValue(gradeObj, "\"date\"");
+            String subject = extractJSONValue(gradeObj, "\"subject\"");
+            String type = extractJSONValue(gradeObj, "\"type\"");
+            double grade = Double.parseDouble(extractJSONValue(gradeObj, "\"grade\""));
+            
+            GradeData gradeData = new GradeData(gradeId, date, subject, type, grade);
+            report.addGrade(gradeData);
+            
+            pos = objEnd + 1;
+        }
+        
+        return report;
     }
     
     /**
