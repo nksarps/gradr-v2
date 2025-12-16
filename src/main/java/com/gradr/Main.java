@@ -1896,25 +1896,24 @@ public class Main {
                         System.out.println("3. Filter by Subject Type (Core/Elective)");
                         System.out.println("4. Filter by Grade Range");
                         System.out.println("5. Filter by Date Range");
-                        System.out.println("6. Combined Filters (Advanced)");
-                        System.out.println("7. View All Grades");
-                        System.out.println("8. Return to Main Menu");
+                        System.out.println("6. View All Grades");
+                        System.out.println("7. Return to Main Menu");
                         System.out.println();
                         
-                        System.out.print("Select option (1-8): ");
+                        System.out.print("Select option (1-7): ");
                         int queryOption;
                         try {
                             queryOption = scanner.nextInt();
                             scanner.nextLine();
                         } catch (InputMismatchException e) {
-                            System.out.println("\nX ERROR: InvalidMenuChoiceException\n   Please enter a valid number (1-8).\n");
+                            System.out.println("\nX ERROR: InvalidMenuChoiceException\n   Please enter a valid number (1-7).\n");
                             scanner.nextLine();
                             break;
                         }
                         
                         System.out.println();
                         
-                        if (queryOption == 8) {
+                        if (queryOption == 7) {
                             break;
                         }
                         
@@ -2022,17 +2021,6 @@ public class Main {
                                 break;
                                 
                             case 6:
-                                // Combined Filters
-                                try {
-                                    queryResults = queryGradesWithCombinedFilters(gradeManager, scanner, studentManager);
-                                    queryExecuted = true;
-                                } catch (NumberFormatException e) {
-                                    System.out.println("X ERROR: InvalidNumberFormatException\n   Please enter valid numbers for grade range.\n");
-                                    break;
-                                }
-                                break;
-                                
-                            case 7:
                                 // View All Grades
                                 List<Grade> allGrades = gradeManager.getGradeHistory();
                                 queryResults = new ArrayList<>(allGrades);
@@ -2047,7 +2035,7 @@ public class Main {
                                 break;
                                 
                             default:
-                                System.out.println("X ERROR: InvalidMenuChoiceException\n   Please select a valid option (1-8).\n");
+                                System.out.println("X ERROR: InvalidMenuChoiceException\n   Please select a valid option (1-7).\n");
                                 break;
                         }
                         
@@ -2960,81 +2948,6 @@ public class Main {
         }
         return results;
     }
-    
-    /**
-     * Query grades with combined filters
-     */
-    private static List<Grade> queryGradesWithCombinedFilters(GradeManager gradeManager, Scanner scanner, StudentManager studentManager) {
-        System.out.println("Combined Filters (leave empty to skip filter):");
-        System.out.println();
-        
-        System.out.print("Student ID: ");
-        String filterStudentId = scanner.nextLine().trim();
-        
-        System.out.print("Subject Name: ");
-        String filterSubjectName = scanner.nextLine().trim();
-        
-        System.out.print("Subject Type (Core/Elective): ");
-        String filterSubjectType = scanner.nextLine().trim();
-        
-        System.out.print("Minimum Grade (0-100): ");
-        String minGradeStr = scanner.nextLine().trim();
-        double minGrade = minGradeStr.isEmpty() ? 0.0 : Double.parseDouble(minGradeStr);
-        
-        System.out.print("Maximum Grade (0-100): ");
-        String maxGradeStr = scanner.nextLine().trim();
-        double maxGrade = maxGradeStr.isEmpty() ? 100.0 : Double.parseDouble(maxGradeStr);
-        
-        System.out.print("Start Date (YYYY-MM-DD): ");
-        String filterStartDate = scanner.nextLine().trim();
-        
-        System.out.print("End Date (YYYY-MM-DD): ");
-        String filterEndDate = scanner.nextLine().trim();
-        
-        System.out.println();
-        
-        List<Grade> results = new ArrayList<>();
-        
-        for (Grade grade : gradeManager.getGradeHistory()) {
-            boolean matches = true;
-            
-            // Student ID filter
-            if (!filterStudentId.isEmpty() && !grade.getStudentId().equalsIgnoreCase(filterStudentId)) {
-                matches = false;
-            }
-            
-            // Subject Name filter
-            if (!filterSubjectName.isEmpty() && !grade.getSubject().getSubjectName().equalsIgnoreCase(filterSubjectName)) {
-                matches = false;
-            }
-            
-            // Subject Type filter
-            if (!filterSubjectType.isEmpty() && !grade.getSubject().getSubjectType().equalsIgnoreCase(filterSubjectType)) {
-                matches = false;
-            }
-            
-            // Grade Range filter
-            if (grade.getGrade() < minGrade || grade.getGrade() > maxGrade) {
-                matches = false;
-            }
-            
-            // Date Range filter
-            String gradeDate = grade.getDate();
-            if (!filterStartDate.isEmpty() && gradeDate.compareTo(filterStartDate) < 0) {
-                matches = false;
-            }
-            if (!filterEndDate.isEmpty() && gradeDate.compareTo(filterEndDate) > 0) {
-                matches = false;
-            }
-            
-            if (matches) {
-                results.add(grade);
-            }
-        }
-        
-        return results;
-    }
-    
     /**
      * Display query results with statistics
      */
