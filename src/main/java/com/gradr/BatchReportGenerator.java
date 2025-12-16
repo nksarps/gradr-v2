@@ -105,13 +105,22 @@ public class BatchReportGenerator {
             throw new IllegalStateException("Thread pool not initialized. Call initializeThreadPool() first.");
         }
         
-        // Create batch output directory
-        String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-        batchOutputDir = Paths.get("./reports/batch_" + dateStr + "/");
-        try {
-            java.nio.file.Files.createDirectories(batchOutputDir);
-        } catch (java.io.IOException e) {
-            System.err.println("Failed to create batch directory: " + e.getMessage());
+        // Set output directory based on format choice
+        switch (formatChoice) {
+            case 1:
+                batchOutputDir = Paths.get("./reports/csv/");
+                break;
+            case 2:
+                batchOutputDir = Paths.get("./reports/json/");
+                break;
+            case 3:
+                batchOutputDir = Paths.get("./reports/binary/");
+                break;
+            case 4:
+                batchOutputDir = Paths.get("./reports/");
+                break;
+            default:
+                batchOutputDir = Paths.get("./reports/");
         }
         
         // Reset counters
@@ -135,10 +144,8 @@ public class BatchReportGenerator {
             futures.add(future);
         }
         
-        // Monitor progress
-        monitorProgress(totalReports, startTime);
-        
-        // Wait for all tasks to complete
+        // Wait for all tasks to complete and monitor progress concurrently
+        int processedCount = 0;
         for (Future<ReportResult> future : futures) {
             try {
                 ReportResult result = future.get(30, TimeUnit.SECONDS);
@@ -157,7 +164,14 @@ public class BatchReportGenerator {
                 failedTasks.incrementAndGet();
                 System.err.println("Task failed: " + e.getMessage());
             }
+            
+            // Display progress after each task completes
+            processedCount++;
+            displayProgress(totalReports, startTime);
         }
+        
+        // Final progress update
+        System.out.println(); // New line after progress bar
         
         long totalTimeMs = System.currentTimeMillis() - startTime;
         totalTime.set(totalTimeMs);
@@ -224,21 +238,17 @@ public class BatchReportGenerator {
             synchronized (fileHandler) {
                 if (formatChoice == 4) {
                     // Export to all formats
-                    fileHandler.exportToAllFormats(report, 
-                        batchOutputDir.resolve(finalFileName).toString());
+                    fileHandler.exportToAllFormats(report, finalFileName);
                 } else {
                     switch (formatChoice) {
                         case 1:
-                            fileHandler.exportToCSV(report, 
-                                batchOutputDir.resolve(finalFileName).toString());
+                            fileHandler.exportToCSV(report, finalFileName);
                             break;
                         case 2:
-                            fileHandler.exportToJSON(report, 
-                                batchOutputDir.resolve(finalFileName).toString());
+                            fileHandler.exportToJSON(report, finalFileName);
                             break;
                         case 3:
-                            fileHandler.exportToBinary(report, 
-                                batchOutputDir.resolve(finalFileName).toString());
+                            fileHandler.exportToBinary(report, finalFileName);
                             break;
                     }
                 }
