@@ -39,6 +39,10 @@ public class StudentReport implements Serializable {
     public double getOverallAverage() { return overallAverage; }
     public String getReportType() { return reportType; }
     public List<GradeData> getGrades() { return grades; }
+    
+    // Setters (for updating student info after import)
+    public void setStudentName(String studentName) { this.studentName = studentName; }
+    public void setStudentType(String studentType) { this.studentType = studentType; }
 }
 
 /**

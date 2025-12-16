@@ -2794,10 +2794,14 @@ public class Main {
         int importedCount = 0;
         String reportStudentId = report.getStudentId();
         
-        // Check if student exists, if not, create it
+        // Check if student exists and update report with actual student info
         try {
             Student reportStudent = studentManager.findStudent(reportStudentId);
-            if (reportStudent == null) {
+            if (reportStudent != null) {
+                // Update report with actual student name and type
+                report.setStudentName(reportStudent.getName());
+                report.setStudentType(reportStudent.getStudentType());
+            } else {
                 // Student doesn't exist - would need to create, but we'll skip for now
                 System.out.println("⚠ Warning: Student " + reportStudentId + " not found. Grades will be imported but student must exist.");
             }
@@ -2824,10 +2828,16 @@ public class Main {
                     reportSubject = new ElectiveSubject(gradeData.getSubjectName(), "");
                 }
                 
-                // Check if grade already exists (by gradeId)
+                // Check if grade already exists (by studentId + subject + grade value)
+                // This is more reliable than checking by gradeId, especially for simple JSON format
                 boolean gradeExists = false;
                 for (Grade existingGrade : gradeManager.getGrades()) {
-                    if (existingGrade != null && existingGrade.getGradeId().equals(gradeData.getGradeId())) {
+                    if (existingGrade != null && 
+                        existingGrade.getStudentId().equals(reportStudentId) &&
+                        existingGrade.getSubject() != null &&
+                        existingGrade.getSubject().getSubjectName().equalsIgnoreCase(gradeData.getSubjectName()) &&
+                        existingGrade.getSubject().getSubjectType().equalsIgnoreCase(gradeData.getSubjectType()) &&
+                        Math.abs(existingGrade.getGrade() - gradeData.getGrade()) < 0.01) { // Compare with small epsilon for floating point
                         gradeExists = true;
                         break;
                     }
@@ -2836,10 +2846,11 @@ public class Main {
                 if (!gradeExists) {
                     // Create and add grade
                     Grade newGrade = new Grade(reportStudentId, reportSubject, gradeData.getGrade());
+                    newGrade.setGradeId();
                     gradeManager.addGrade(newGrade);
                     importedCount++;
                 } else {
-                    System.out.println("⚠ Grade " + gradeData.getGradeId() + " already exists, skipping");
+                    System.out.println("⚠ Grade for " + gradeData.getSubjectName() + " (" + gradeData.getSubjectType() + ") already exists for student " + reportStudentId + ", skipping");
                 }
                 
             } catch (Exception e) {
