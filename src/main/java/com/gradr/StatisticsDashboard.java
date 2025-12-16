@@ -30,6 +30,8 @@ public class StatisticsDashboard {
     private final AtomicBoolean isRunning = new AtomicBoolean(false);
     private final AtomicBoolean isPaused = new AtomicBoolean(false);
     private final AtomicInteger refreshInterval = new AtomicInteger(5); // seconds
+    private final AtomicBoolean autoDisplay = new AtomicBoolean(true); // Auto-display on refresh
+    private final AtomicBoolean clearScreenOnDisplay = new AtomicBoolean(true); // Clear screen when displaying
     
     // Thread-safe statistics storage
     private final ConcurrentHashMap<String, Object> statistics = new ConcurrentHashMap<>();
@@ -37,6 +39,7 @@ public class StatisticsDashboard {
     private final AtomicInteger cacheHits = new AtomicInteger(0);
     private final AtomicInteger cacheMisses = new AtomicInteger(0);
     private final AtomicLong calculationTime = new AtomicLong(0);
+    private final AtomicBoolean isCalculating = new AtomicBoolean(false);
     
     // Thread pool for statistics calculation
     private ExecutorService statsPool;
@@ -78,24 +81,32 @@ public class StatisticsDashboard {
         isRunning.set(true);
         isPaused.set(false);
         
+        // Perform initial calculation immediately
+        calculateStatistics();
+        
         backgroundThread = new Thread(() -> {
             while (isRunning.get()) {
-                if (!isPaused.get()) {
-                    calculateStatistics();
-                }
-                
-                // Sleep for refresh interval
+                // Sleep first, then calculate (since we already did initial calculation)
                 try {
                     Thread.sleep(refreshInterval.get() * 1000);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     break;
                 }
+                
+                if (!isPaused.get() && isRunning.get()) {
+                    calculateStatistics();
+                    // Auto-display after calculation
+                    if (autoDisplay.get()) {
+                        displayDashboard();
+                    }
+                }
             }
         });
         
         backgroundThread.setDaemon(true);
-        backgroundThread.setName("StatisticsDashboard-Thread");
+        backgroundThread.setName("StatisticsDashboard-Daemon");
+        backgroundThread.setPriority(Thread.NORM_PRIORITY - 1); // Slightly lower priority
         backgroundThread.start();
     }
     
@@ -151,6 +162,7 @@ public class StatisticsDashboard {
      */
     private void calculateStatistics() {
         long startTime = System.currentTimeMillis();
+        isCalculating.set(true);
         
         // Calculate statistics directly (cache is private in GradeManager)
         cacheMisses.incrementAndGet();
@@ -232,6 +244,8 @@ public class StatisticsDashboard {
             statistics.put("error", "Calculation timeout");
         } catch (Exception e) {
             statistics.put("error", e.getMessage());
+        } finally {
+            isCalculating.set(false);
         }
     }
     
@@ -370,21 +384,26 @@ public class StatisticsDashboard {
      * Display the dashboard
      */
     public void displayDashboard() {
-        // Don't clear screen - just print newlines to separate updates
-        // This prevents interference with input handling
-        System.out.println();
-        System.out.println();
+        // Clear screen for cleaner display if enabled
+        if (clearScreenOnDisplay.get()) {
+            clearScreen();
+        } else {
+            System.out.println("\n" + "=".repeat(63));
+        }
         
-        System.out.println("REAL-TIME STATISTICS DASHBOARD");
-        System.out.println("_______________________________________________");
+        System.out.println("╔═══════════════════════════════════════════════════════════════╗");
+        System.out.println("║        REAL-TIME STATISTICS DASHBOARD (LIVE)                  ║");
+        System.out.println("╚═══════════════════════════════════════════════════════════════╝");
         
-        // Status line
+        // Status line with loading indicator
         String threadStatus = isPaused.get() ? "PAUSED" : (isRunning.get() ? "RUNNING" : "STOPPED");
-        System.out.printf("Auto-refresh: %s (%d sec) | Thread: %s\n", 
+        String loadingIndicator = isCalculating.get() ? " [Loading...]" : "";
+        System.out.printf("Status: %s%s | Auto-refresh: %s (%d sec)\n", 
+            threadStatus,
+            loadingIndicator,
             isPaused.get() ? "Paused" : "Enabled", 
-            refreshInterval.get(), 
-            threadStatus);
-        System.out.println("Press 'Q' to quit | 'R' to refresh now | 'P' to pause/resume");
+            refreshInterval.get());
+        System.out.println("Commands: Q=Quit | R=Refresh Now | P=Pause/Resume");
         System.out.println();
         
         // Last updated timestamp
@@ -401,8 +420,9 @@ public class StatisticsDashboard {
         System.out.println();
         
         // System Status
-        System.out.println("SYSTEM STATUS");
-        System.out.println("_______________________________________________");
+        System.out.println("┌─────────────────────────────────────────────────────────────┐");
+        System.out.println("│ SYSTEM STATUS                                               │");
+        System.out.println("└─────────────────────────────────────────────────────────────┘");
         System.out.println("Total Students: " + statistics.getOrDefault("totalStudents", 0));
         System.out.println("Active Threads: " + statistics.getOrDefault("activeThreads", 0));
         System.out.printf("Cache Hit Rate: %.1f%%\n", 
@@ -410,27 +430,32 @@ public class StatisticsDashboard {
         
         long memoryUsed = (Long)statistics.getOrDefault("memoryUsed", 0L);
         long memoryTotal = (Long)statistics.getOrDefault("memoryTotal", 1L);
-        System.out.printf("Memory Usage: %s / %s\n", 
+        double memoryPercent = memoryTotal > 0 ? (memoryUsed * 100.0 / memoryTotal) : 0;
+        System.out.printf("Memory Usage: %s / %s (%.1f%%)\n", 
             formatMemory(memoryUsed), 
-            formatMemory(memoryTotal));
+            formatMemory(memoryTotal),
+            memoryPercent);
         System.out.println();
         
         // Live Statistics
-        System.out.println("LIVE STATISTICS");
-        System.out.println("_______________________________________________");
+        System.out.println("┌─────────────────────────────────────────────────────────────┐");
+        System.out.println("│ LIVE STATISTICS                                             │");
+        System.out.println("└─────────────────────────────────────────────────────────────┘");
         System.out.println("Total Grades: " + statistics.getOrDefault("totalGrades", 0));
         System.out.println("Grades Added (last 5 min): " + 
             statistics.getOrDefault("gradesAddedLast5Min", 0));
         System.out.println("Average Processing Time: " + 
             statistics.getOrDefault("avgProcessingTime", 0) + "ms");
+        System.out.println("Total Refresh Cycles: " + cacheMisses.get());
         System.out.println();
         
         // Grade Distribution
         @SuppressWarnings("unchecked")
         Map<String, Integer> distribution = (Map<String, Integer>)statistics.get("gradeDistribution");
         if (distribution != null) {
-            System.out.println("Grade Distribution (Live):");
-            System.out.println("_______________________________________________");
+            System.out.println("┌─────────────────────────────────────────────────────────────┐");
+            System.out.println("│ GRADE DISTRIBUTION (LIVE)                                   │");
+            System.out.println("└─────────────────────────────────────────────────────────────┘");
             int total = distribution.values().stream().mapToInt(Integer::intValue).sum();
             if (total > 0) {
                 displayGradeBar("90-100% (A)", distribution.get("A"), total);
@@ -438,30 +463,36 @@ public class StatisticsDashboard {
                 displayGradeBar("70-79% (C)", distribution.get("C"), total);
                 displayGradeBar("60-69% (D)", distribution.get("D"), total);
                 displayGradeBar("0-59% (F)", distribution.get("F"), total);
+            } else {
+                System.out.println("No grades recorded yet");
             }
             System.out.println();
         }
         
         // Current Statistics
-        System.out.println("Current Statistics:");
-        System.out.println("_______________________________________________");
+        System.out.println("┌─────────────────────────────────────────────────────────────┐");
+        System.out.println("│ STATISTICAL MEASURES                                        │");
+        System.out.println("└─────────────────────────────────────────────────────────────┘");
         double mean = (Double)statistics.getOrDefault("mean", 0.0);
         double median = (Double)statistics.getOrDefault("median", 0.0);
         double stdDev = (Double)statistics.getOrDefault("stdDev", 0.0);
-        System.out.printf("Mean: %.1f%%\n", mean);
-        System.out.printf("Median: %.1f%%\n", median);
-        System.out.printf("Std Dev: %.1f%%\n", stdDev);
+        System.out.printf("Class Average (Mean):     %.1f%%\n", mean);
+        System.out.printf("Class Median:             %.1f%%\n", median);
+        System.out.printf("Standard Deviation:       %.1f%%\n", stdDev);
         System.out.println();
         
         // Top Performers
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> topPerformers = (List<Map<String, Object>>)statistics.get("topPerformers");
         if (topPerformers != null && !topPerformers.isEmpty()) {
-            System.out.println("Top Performers (Live Rankings):");
-            System.out.println("_______________________________________________");
+            System.out.println("┌─────────────────────────────────────────────────────────────┐");
+            System.out.println("│ TOP PERFORMERS (LIVE RANKINGS)                              │");
+            System.out.println("└─────────────────────────────────────────────────────────────┘");
             int rank = 1;
             for (Map<String, Object> performer : topPerformers) {
-                System.out.printf("%d. %s %s: %.1f%% GPA: %.2f\n",
+                String medal = rank == 1 ? "🥇" : rank == 2 ? "🥈" : "🥉";
+                System.out.printf("%s #%d: %-10s %-20s | Avg: %.1f%% | GPA: %.2f\n",
+                    medal,
                     rank++,
                     performer.get("studentId"),
                     performer.get("name"),
@@ -472,14 +503,29 @@ public class StatisticsDashboard {
             System.out.println();
         }
         
+        // Error display (if any)
+        if (statistics.containsKey("error")) {
+            System.out.println("┌─────────────────────────────────────────────────────────────┐");
+            System.out.println("│ ⚠ ERROR                                                     │");
+            System.out.println("└─────────────────────────────────────────────────────────────┘");
+            System.out.println("Error: " + statistics.get("error"));
+            System.out.println();
+        }
+        
         // Auto-refresh countdown
+        System.out.println("───────────────────────────────────────────────────────────────");
         if (isRunning.get() && !isPaused.get()) {
             long timeSinceUpdate = System.currentTimeMillis() - lastUpdateTime.get();
             long timeUntilNext = (refreshInterval.get() * 1000) - timeSinceUpdate;
             if (timeUntilNext > 0) {
-                System.out.println("Auto-refresh in: " + (timeUntilNext / 1000) + " seconds...");
+                System.out.println("⏱ Next auto-refresh in: " + (timeUntilNext / 1000) + " seconds");
+            } else {
+                System.out.println("⏱ Refreshing now...");
             }
+        } else if (isPaused.get()) {
+            System.out.println("⏸ Auto-refresh paused - Press 'P' to resume");
         }
+        System.out.println("───────────────────────────────────────────────────────────────");
     }
     
     /**
@@ -509,6 +555,50 @@ public class StatisticsDashboard {
     }
     
     /**
+     * Clear screen for better display
+     */
+    private void clearScreen() {
+        try {
+            // Try to clear screen with ANSI escape codes (works in most modern terminals)
+            System.out.print("\033[H\033[2J");
+            System.out.flush();
+        } catch (Exception e) {
+            // Fallback: print newlines
+            for (int i = 0; i < 50; i++) {
+                System.out.println();
+            }
+        }
+    }
+    
+    /**
+     * Enable auto-display
+     */
+    public void enableAutoDisplay() {
+        autoDisplay.set(true);
+    }
+    
+    /**
+     * Disable auto-display
+     */
+    public void disableAutoDisplay() {
+        autoDisplay.set(false);
+    }
+    
+    /**
+     * Enable screen clearing on display
+     */
+    public void enableScreenClear() {
+        clearScreenOnDisplay.set(true);
+    }
+    
+    /**
+     * Disable screen clearing on display (use separators instead)
+     */
+    public void disableScreenClear() {
+        clearScreenOnDisplay.set(false);
+    }
+    
+    /**
      * Get thread status
      */
     public String getThreadStatus() {
@@ -529,6 +619,36 @@ public class StatisticsDashboard {
      */
     public boolean isPaused() {
         return isPaused.get();
+    }
+    
+    /**
+     * Check if dashboard is currently calculating
+     */
+    public boolean isCalculating() {
+        return isCalculating.get();
+    }
+    
+    /**
+     * Get current refresh interval
+     */
+    public int getRefreshInterval() {
+        return refreshInterval.get();
+    }
+    
+    /**
+     * Set refresh interval (in seconds)
+     */
+    public void setRefreshInterval(int seconds) {
+        if (seconds >= 1 && seconds <= 60) {
+            refreshInterval.set(seconds);
+        }
+    }
+    
+    /**
+     * Get statistics snapshot (for external access)
+     */
+    public Map<String, Object> getStatisticsSnapshot() {
+        return new ConcurrentHashMap<>(statistics);
     }
 }
 

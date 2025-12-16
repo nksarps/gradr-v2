@@ -1171,65 +1171,109 @@ public class Main {
                     break;
                 case 10:
                     try {
+                        System.out.println("REAL-TIME STATISTICS DASHBOARD");
+                        System.out.println("_______________________________________________");
+                        System.out.println();
+                        System.out.println("Starting background daemon thread...");
+                        
                         StatisticsDashboard dashboard = new StatisticsDashboard(studentManager, gradeManager);
                         dashboardRef[0] = dashboard; // Store reference for menu display
+                        
                         // Register thread pool with performance monitor
-                        performanceMonitor.registerThreadPool("CachedThreadPool", 
+                        performanceMonitor.registerThreadPool("StatisticsDashboard", 
                             dashboard.getExecutorService(), dashboard.getMaxThreadCount());
+                        
+                        // Start the dashboard (this will perform initial calculation)
                         dashboard.start();
                         
-                        System.out.println("Dashboard started. Commands: Q=Quit, R=Refresh, P=Pause/Resume");
-                        System.out.println("Type command and press Enter.");
+                        System.out.println("✓ Background daemon thread started");
+                        System.out.println("✓ Auto-refresh enabled (every 5 seconds)");
                         System.out.println();
-                        Thread.sleep(500); // Brief pause to show message
+                        System.out.println("Waiting for initial statistics calculation...");
                         
-                        // Simplified approach: single-threaded with blocking input
-                        // This avoids any thread synchronization issues
-                        boolean shouldQuit = false;
+                        // Wait for initial calculation to complete
+                        int waitCount = 0;
+                        while (dashboard.isCalculating() && waitCount < 20) {
+                            Thread.sleep(100);
+                            waitCount++;
+                        }
+                        
+                        System.out.println();
                         
                         // Display initial dashboard
                         dashboard.displayDashboard();
                         
-                        while (!shouldQuit && dashboard.isRunning()) {
-                            // Show prompt and wait for input (this blocks)
-                            System.out.print("Command (Q/R/P): ");
-                            System.out.flush(); // Ensure prompt is visible
-                            
-                            // Read input (blocks until user types something)
-                            String input = scanner.nextLine().trim().toUpperCase();
-                            
-                            // Process command
-                            if (input.equals("Q")) {
-                                shouldQuit = true;
-                                break;
-                            } else if (input.equals("R")) {
-                                dashboard.refresh();
-                                dashboard.displayDashboard();
-                            } else if (input.equals("P")) {
-                                if (dashboard.isPaused()) {
-                                    dashboard.resume();
-                                } else {
-                                    dashboard.pause();
+                        // Auto-refresh approach: background thread handles display automatically
+                        // Main thread handles user input in a loop
+                        final boolean[] shouldQuit = {false};
+                        
+                        // Create input reader thread
+                        Thread inputThread = new Thread(() -> {
+                            Scanner inputScanner = new Scanner(System.in);
+                            while (!shouldQuit[0] && dashboard.isRunning()) {
+                                try {
+                                    System.out.print("\nCommand (Q=Quit | R=Refresh | P=Pause/Resume): ");
+                                    System.out.flush();
+                                    
+                                    if (inputScanner.hasNextLine()) {
+                                        String input = inputScanner.nextLine().trim().toUpperCase();
+                                        
+                                        // Process command
+                                        if (input.equals("Q")) {
+                                            System.out.println("\n⏹ Stopping dashboard...");
+                                            shouldQuit[0] = true;
+                                            break;
+                                        } else if (input.equals("R")) {
+                                            System.out.println("\n🔄 Manual refresh triggered...");
+                                            dashboard.refresh();
+                                            Thread.sleep(200);
+                                            dashboard.displayDashboard();
+                                        } else if (input.equals("P")) {
+                                            if (dashboard.isPaused()) {
+                                                System.out.println("\n▶ Resuming auto-refresh...");
+                                                dashboard.resume();
+                                            } else {
+                                                System.out.println("\n⏸ Pausing auto-refresh...");
+                                                dashboard.pause();
+                                            }
+                                            Thread.sleep(100);
+                                            dashboard.displayDashboard();
+                                        } else if (!input.isEmpty()) {
+                                            System.out.println("❌ Unknown command. Use Q, R, or P.");
+                                        }
+                                    }
+                                } catch (Exception e) {
+                                    // Input interrupted, exit gracefully
+                                    break;
                                 }
-                                dashboard.displayDashboard();
-                            } else if (!input.isEmpty()) {
-                                System.out.println("Unknown command. Use Q, R, or P.");
-                                System.out.println();
                             }
-                            
-                            // If not quitting, continue to next iteration (will show prompt again)
+                        });
+                        
+                        inputThread.setName("DashboardInputThread");
+                        inputThread.setDaemon(true);
+                        inputThread.start();
+                        
+                        // Wait for quit signal
+                        while (!shouldQuit[0] && dashboard.isRunning()) {
+                            Thread.sleep(100);
                         }
                         
                         // Cleanup
                         dashboard.stop();
+                        inputThread.interrupt();
                         
                         System.out.println();
-                        System.out.println("Dashboard closed.");
+                        System.out.println("✓ Dashboard closed successfully");
+                        System.out.println("✓ Background thread terminated");
                         System.out.println();
                         
                     } catch (Exception e) {
                         System.out.println();
                         System.out.println("X ERROR: " + e.getClass().getSimpleName() + "\n   " + e.getMessage());
+                        if (dashboardRef[0] != null) {
+                            dashboardRef[0].stop();
+                            dashboardRef[0] = null;
+                        }
                         System.out.println();
                     }
                     break;
@@ -3086,23 +3130,6 @@ public class Main {
         System.out.println();
 
         System.out.println("19. Exit");
-        System.out.println();
-        
-        // Display background tasks status with real data
-        int activeTasks = 0;
-        String statsStatus = "idle";
-        
-        // Count active scheduled tasks
-        if (taskScheduler != null) {
-            activeTasks = taskScheduler.getActiveTasks().size();
-        }
-        
-        // Check statistics dashboard status
-        if (dashboard != null && dashboard.isRunning()) {
-            statsStatus = dashboard.isPaused() ? "paused" : "updating";
-        }
-        
-        System.out.printf("Background Tasks: ⚡ %d active | 📊 Stats %s%n", activeTasks, statsStatus);
         System.out.println();
     }
 }
