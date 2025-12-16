@@ -648,6 +648,9 @@ public class Main {
                                         exportedPath = fileHandler.exportToCSV(report, finalFileName);
                                         fileSize = fileHandler.getCsvFileSize();
                                         writeTime = fileHandler.getCsvWriteTime();
+                                        // Record I/O operation for performance monitoring
+                                        performanceMonitor.recordIOOperation("CSV Write", 
+                                            exportedPath.getFileName().toString(), writeTime, fileSize, false);
                                         System.out.println("✓ CSV Export completed");
                                         System.out.printf("  File: %s.csv\n", finalFileName);
                                         break;
@@ -655,6 +658,9 @@ public class Main {
                                         exportedPath = fileHandler.exportToJSON(report, finalFileName);
                                         fileSize = fileHandler.getJsonFileSize();
                                         writeTime = fileHandler.getJsonWriteTime();
+                                        // Record I/O operation for performance monitoring
+                                        performanceMonitor.recordIOOperation("JSON Write", 
+                                            exportedPath.getFileName().toString(), writeTime, fileSize, false);
                                         System.out.println("✓ JSON Export completed");
                                         System.out.printf("  File: %s.json\n", finalFileName);
                                         break;
@@ -662,6 +668,9 @@ public class Main {
                                         exportedPath = fileHandler.exportToBinary(report, finalFileName);
                                         fileSize = fileHandler.getBinaryFileSize();
                                         writeTime = fileHandler.getBinaryWriteTime();
+                                        // Record I/O operation for performance monitoring
+                                        performanceMonitor.recordIOOperation("Binary Write", 
+                                            exportedPath.getFileName().toString(), writeTime, fileSize, false);
                                         System.out.println("✓ Binary Export completed");
                                         System.out.printf("  File: %s.dat\n", finalFileName);
                                         break;

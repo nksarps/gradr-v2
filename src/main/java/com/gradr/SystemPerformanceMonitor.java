@@ -67,9 +67,11 @@ public class SystemPerformanceMonitor {
         
         // Initialize IO stats
         ioStats.put("CSV Read", new IOStats("NIO.2 Stream"));
+        ioStats.put("CSV Write", new IOStats("NIO.2 Stream"));
+        ioStats.put("JSON Read", new IOStats("NIO.2 Buffer"));
         ioStats.put("JSON Write", new IOStats("NIO.2 Buffer"));
         ioStats.put("Binary Read", new IOStats("ObjectStream"));
-        ioStats.put("CSV Write", new IOStats("NIO.2 Stream"));
+        ioStats.put("Binary Write", new IOStats("ObjectStream"));
     }
     
     /**
