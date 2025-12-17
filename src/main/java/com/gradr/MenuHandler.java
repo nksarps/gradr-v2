@@ -2684,8 +2684,377 @@ public class MenuHandler {
     }
     
     private void handleCacheManagement() {
-        System.out.println("CACHE MANAGEMENT - See original Main.java for full implementation");
-        System.out.println("This is a simplified demonstration of SOLID architecture.\n");
+        try {
+            System.out.println("CACHE MANAGEMENT");
+            System.out.println("_______________________________________________");
+            System.out.println();
+            
+            // Get cache manager from ApplicationContext
+            CacheManager cacheManager = context.getCacheManager();
+            if (cacheManager == null) {
+                System.out.println("X Cache manager not initialized.");
+                System.out.println();
+                return;
+            }
+            
+            // Display current cache statistics
+            CacheManager.CacheStatistics stats = cacheManager.getStatistics();
+            System.out.println("Current Cache Status:");
+            System.out.printf("Entries: %d/150 (%.1f%% full)%n", 
+                stats.getTotalEntries(), 
+                (stats.getTotalEntries() * 100.0 / 150));
+            System.out.printf("Hit Rate: %.1f%% | Miss Rate: %.1f%%%n", 
+                stats.getHitRate(), 
+                stats.getMissRate());
+            System.out.println("Memory Usage: " + formatMemory(stats.getMemoryUsage()));
+            System.out.println();
+            
+            System.out.println("Cache Management Options:");
+            System.out.println("1. View Cache Statistics");
+            System.out.println("2. View Cache Contents");
+            System.out.println("3. Invalidate Cache by Type");
+            System.out.println("4. Clear Entire Cache");
+            System.out.println("5. Warm Cache");
+            System.out.println("6. Return to Main Menu");
+            System.out.println();
+            
+            System.out.print("Select option (1-6): ");
+            int cacheOption;
+            try {
+                cacheOption = ui.getScanner().nextInt();
+                ui.getScanner().nextLine();
+            } catch (InputMismatchException e) {
+                ui.getScanner().nextLine();
+                throw new InvalidMenuChoiceException("Please enter a valid number (1-6).");
+            }
+            
+            System.out.println();
+            
+            switch (cacheOption) {
+                case 1:
+                    // View Cache Statistics
+                    displayCacheStatistics(cacheManager);
+                    break;
+                    
+                case 2:
+                    // View Cache Contents
+                    displayCacheContents(cacheManager);
+                    break;
+                    
+                case 3:
+                    // Invalidate Cache by Type
+                    invalidateCacheByType(cacheManager);
+                    break;
+                    
+                case 4:
+                    // Clear Entire Cache
+                    clearEntireCache(cacheManager);
+                    break;
+                    
+                case 5:
+                    // Warm Cache
+                    warmCache(cacheManager);
+                    break;
+                    
+                case 6:
+                    // Return to Main Menu
+                    return;
+                    
+                default:
+                    throw new InvalidMenuChoiceException("Invalid option. Please select 1-6.");
+            }
+            
+        } catch (InvalidMenuChoiceException e) {
+            System.out.println();
+            System.out.println(e.getMessage());
+            System.out.println();
+        } catch (Exception e) {
+            System.out.println();
+            System.out.println("X ERROR: " + e.getClass().getSimpleName() + "\n   " + e.getMessage());
+            System.out.println();
+        }
+    }
+    
+    /**
+     * Display detailed cache statistics
+     */
+    private void displayCacheStatistics(CacheManager cacheManager) {
+        System.out.println("CACHE STATISTICS");
+        System.out.println("_______________________________________________");
+        System.out.println();
+        
+        CacheManager.CacheStatistics stats = cacheManager.getStatistics();
+        
+        System.out.println("Cache Performance:");
+        System.out.printf("Total Entries: %d/150 (%.1f%% capacity)%n", 
+            stats.getTotalEntries(),
+            (stats.getTotalEntries() * 100.0 / 150));
+        System.out.println("Memory Usage: " + formatMemory(stats.getMemoryUsage()));
+        System.out.println();
+        
+        System.out.println("Hit/Miss Statistics:");
+        long totalRequests = stats.getTotalHits() + stats.getTotalMisses();
+        System.out.printf("Total Requests: %d%n", totalRequests);
+        System.out.printf("Cache Hits: %d (%.1f%%)%n", stats.getTotalHits(), stats.getHitRate());
+        System.out.printf("Cache Misses: %d (%.1f%%)%n", stats.getTotalMisses(), stats.getMissRate());
+        System.out.println();
+        
+        System.out.println("Performance Metrics:");
+        System.out.printf("Avg Hit Time: %dms%n", stats.getAverageHitTime());
+        System.out.printf("Avg Miss Time: %dms%n", stats.getAverageMissTime());
+        System.out.printf("Evictions: %d (LRU policy)%n", stats.getEvictionCount());
+        System.out.println();
+        
+        // Performance assessment
+        System.out.println("Performance Assessment:");
+        if (stats.getHitRate() >= 80) {
+            System.out.println("✓ Excellent cache performance (>= 80% hit rate)");
+        } else if (stats.getHitRate() >= 60) {
+            System.out.println("✓ Good cache performance (60-79% hit rate)");
+        } else if (stats.getHitRate() >= 40) {
+            System.out.println("⚠ Moderate cache performance (40-59% hit rate)");
+        } else if (totalRequests > 0) {
+            System.out.println("⚠ Poor cache performance (< 40% hit rate)");
+            System.out.println("  Consider warming cache or reviewing access patterns");
+        } else {
+            System.out.println("ℹ No cache access yet");
+        }
+        System.out.println();
+    }
+    
+    /**
+     * Display cache contents with metadata
+     */
+    private void displayCacheContents(CacheManager cacheManager) {
+        System.out.println("CACHE CONTENTS");
+        System.out.println("_______________________________________________");
+        System.out.println();
+        
+        java.util.List<java.util.Map<String, Object>> contents = cacheManager.getCacheContents();
+        
+        if (contents.isEmpty()) {
+            System.out.println("Cache is empty.");
+            System.out.println();
+            return;
+        }
+        
+        System.out.printf("%-30s | %-15s | %-8s | %-19s | %-8s%n", 
+            "KEY", "TYPE", "ACCESSED", "LAST ACCESS", "EXPIRED");
+        System.out.println("_______________________________________________");
+        
+        int displayCount = 0;
+        for (java.util.Map<String, Object> entry : contents) {
+            if (displayCount >= 20) { // Limit to 20 entries
+                System.out.println("... and " + (contents.size() - 20) + " more entries");
+                break;
+            }
+            
+            String key = (String) entry.get("key");
+            String type = (String) entry.get("type");
+            int accessCount = (Integer) entry.get("accessCount");
+            java.time.LocalDateTime lastAccessed = (java.time.LocalDateTime) entry.get("lastAccessed");
+            boolean isExpired = (Boolean) entry.get("isExpired");
+            
+            // Truncate key if too long
+            String displayKey = key.length() > 30 ? key.substring(0, 27) + "..." : key;
+            
+            // Format last accessed time
+            String lastAccessStr = lastAccessed.format(
+                java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            
+            System.out.printf("%-30s | %-15s | %-8d | %-19s | %-8s%n",
+                displayKey,
+                type,
+                accessCount,
+                lastAccessStr,
+                isExpired ? "Yes" : "No");
+            
+            displayCount++;
+        }
+        
+        System.out.println("_______________________________________________");
+        System.out.println();
+        System.out.printf("Total Entries: %d%n", contents.size());
+        
+        // Count by type
+        java.util.Map<String, Integer> typeCounts = new java.util.HashMap<>();
+        for (java.util.Map<String, Object> entry : contents) {
+            String type = (String) entry.get("type");
+            typeCounts.put(type, typeCounts.getOrDefault(type, 0) + 1);
+        }
+        
+        System.out.println("Distribution by Type:");
+        for (java.util.Map.Entry<String, Integer> typeEntry : typeCounts.entrySet()) {
+            System.out.printf("  %s: %d entries%n", typeEntry.getKey(), typeEntry.getValue());
+        }
+        System.out.println();
+    }
+    
+    /**
+     * Invalidate cache entries by type
+     */
+    private void invalidateCacheByType(CacheManager cacheManager) {
+        System.out.println("INVALIDATE CACHE BY TYPE");
+        System.out.println("_______________________________________________");
+        System.out.println();
+        
+        System.out.println("Cache Types:");
+        System.out.println("1. Student Cache");
+        System.out.println("2. Grade Report Cache");
+        System.out.println("3. Statistics Cache");
+        System.out.println("4. Cancel");
+        System.out.println();
+        
+        System.out.print("Select type to invalidate (1-4): ");
+        int typeChoice;
+        try {
+            typeChoice = ui.getScanner().nextInt();
+            ui.getScanner().nextLine();
+        } catch (InputMismatchException e) {
+            ui.getScanner().nextLine();
+            System.out.println();
+            System.out.println("Invalid input. Please enter a valid number.");
+            System.out.println();
+            return;
+        }
+        
+        System.out.println();
+        
+        if (typeChoice == 4) {
+            System.out.println("Operation cancelled.");
+            System.out.println();
+            return;
+        }
+        
+        CacheManager.CacheType cacheType;
+        String typeName;
+        switch (typeChoice) {
+            case 1:
+                cacheType = CacheManager.CacheType.STUDENT;
+                typeName = "Student";
+                break;
+            case 2:
+                cacheType = CacheManager.CacheType.GRADE_REPORT;
+                typeName = "Grade Report";
+                break;
+            case 3:
+                cacheType = CacheManager.CacheType.STATISTICS;
+                typeName = "Statistics";
+                break;
+            default:
+                System.out.println("Invalid cache type selection.");
+                System.out.println();
+                return;
+        }
+        
+        // Confirm invalidation
+        System.out.print("Confirm invalidation of " + typeName + " cache? (Y/N): ");
+        String confirm = ui.getScanner().nextLine().trim().toUpperCase();
+        System.out.println();
+        
+        if (!confirm.equals("Y")) {
+            System.out.println("Operation cancelled.");
+            System.out.println();
+            return;
+        }
+        
+        cacheManager.invalidateByType(cacheType);
+        System.out.println("✓ " + typeName + " cache invalidated successfully.");
+        System.out.println();
+        
+        // Display updated statistics
+        CacheManager.CacheStatistics stats = cacheManager.getStatistics();
+        System.out.printf("Cache now contains %d entries.%n", stats.getTotalEntries());
+        System.out.println();
+    }
+    
+    /**
+     * Clear entire cache
+     */
+    private void clearEntireCache(CacheManager cacheManager) {
+        System.out.println("CLEAR ENTIRE CACHE");
+        System.out.println("_______________________________________________");
+        System.out.println();
+        
+        CacheManager.CacheStatistics statsBefore = cacheManager.getStatistics();
+        
+        System.out.println("⚠ WARNING: This will clear ALL cached data!");
+        System.out.printf("Current cache contains %d entries.%n", statsBefore.getTotalEntries());
+        System.out.println();
+        
+        System.out.print("Are you sure you want to clear the entire cache? (Y/N): ");
+        String confirm = ui.getScanner().nextLine().trim().toUpperCase();
+        System.out.println();
+        
+        if (!confirm.equals("Y")) {
+            System.out.println("Operation cancelled.");
+            System.out.println();
+            return;
+        }
+        
+        cacheManager.clear();
+        System.out.println("✓ Cache cleared successfully.");
+        System.out.println();
+        
+        // Display results
+        CacheManager.CacheStatistics statsAfter = cacheManager.getStatistics();
+        System.out.printf("Entries removed: %d%n", statsBefore.getTotalEntries());
+        System.out.printf("Current entries: %d%n", statsAfter.getTotalEntries());
+        System.out.println("Memory freed: " + formatMemory(statsBefore.getMemoryUsage()));
+        System.out.println();
+        
+        System.out.println("Note: Cache will be automatically repopulated on next access.");
+        System.out.println();
+    }
+    
+    /**
+     * Warm cache with frequently accessed data
+     */
+    private void warmCache(CacheManager cacheManager) {
+        System.out.println("WARM CACHE");
+        System.out.println("_______________________________________________");
+        System.out.println();
+        
+        CacheManager.CacheStatistics statsBefore = cacheManager.getStatistics();
+        System.out.printf("Current cache entries: %d%n", statsBefore.getTotalEntries());
+        System.out.println();
+        
+        System.out.println("Warming cache with frequently accessed data...");
+        System.out.println();
+        
+        long startTime = System.currentTimeMillis();
+        cacheManager.warmCache(studentManager, gradeManager);
+        long duration = System.currentTimeMillis() - startTime;
+        
+        CacheManager.CacheStatistics statsAfter = cacheManager.getStatistics();
+        
+        System.out.println("✓ Cache warming completed!");
+        System.out.println();
+        
+        System.out.println("Results:");
+        System.out.printf("Entries before: %d%n", statsBefore.getTotalEntries());
+        System.out.printf("Entries after: %d%n", statsAfter.getTotalEntries());
+        System.out.printf("New entries: %d%n", statsAfter.getTotalEntries() - statsBefore.getTotalEntries());
+        System.out.printf("Time taken: %dms%n", duration);
+        System.out.println();
+        
+        System.out.println("Cached Data:");
+        System.out.println("✓ All student records");
+        System.out.println("✓ Class statistics");
+        System.out.println();
+    }
+    
+    /**
+     * Format memory size for display
+     */
+    private String formatMemory(long bytes) {
+        if (bytes < 1024) {
+            return bytes + " B";
+        } else if (bytes < 1024 * 1024) {
+            return String.format("%.2f KB", bytes / 1024.0);
+        } else {
+            return String.format("%.2f MB", bytes / (1024.0 * 1024.0));
+        }
     }
     
     private void handleAuditTrail() {
