@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.InputMismatchException;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * MenuHandler - Handles menu-driven application flow
@@ -138,6 +139,8 @@ public class MenuHandler {
         System.out.println("_______________________________________________");
         System.out.println();
         
+        long startTime = System.currentTimeMillis();
+        
         System.out.print("Enter student name: ");
         String name = ui.getScanner().nextLine();
         ValidationUtils.validateName(name);
@@ -169,6 +172,13 @@ public class MenuHandler {
         
         // Cache the new student
         cacheManager.put("student:" + student.getStudentId(), student, CacheManager.CacheType.STUDENT);
+        
+        // Audit log
+        long executionTime = System.currentTimeMillis() - startTime;
+        context.getAuditLogger().log("STUDENT_ADD", 
+            "Added student: " + student.getName(), 
+            executionTime, true, null, 
+            "Student ID: " + student.getStudentId() + ", Type: " + student.getStudentType());
         
         // Display complete student details
         System.out.println();
@@ -216,6 +226,8 @@ public class MenuHandler {
         System.out.println("RECORD GRADE");
         System.out.println("_______________________________________________");
         System.out.println();
+
+        long startTime = System.currentTimeMillis();
 
         System.out.print("Enter Student ID: ");
         String studentId = ui.getScanner().nextLine();
@@ -324,6 +336,13 @@ public class MenuHandler {
                         "Process grade for " + student.getName(), studentId);
                 gradeManager.scheduleTask(gradeTask);
                 
+                // Audit log
+                long executionTime = System.currentTimeMillis() - startTime;
+                context.getAuditLogger().log("GRADE_RECORD", 
+                    "Recorded grade for " + student.getName(), 
+                    executionTime, true, null, 
+                    "Student: " + studentId + ", Subject: " + subject.getSubjectName() + ", Grade: " + gradeInput);
+                
                 System.out.println("Grade added successfully.\n");
             } else if (confirmGrade == 'N' || confirmGrade == 'n') {
                 Grade.gradeCounter--;
@@ -404,6 +423,8 @@ public class MenuHandler {
         System.out.println("_______________________________________________");
         System.out.println();
 
+        long startTime = System.currentTimeMillis();
+
         System.out.print("Enter Student ID: ");
         String studentId = ui.getScanner().nextLine();
         System.out.println();
@@ -470,6 +491,13 @@ public class MenuHandler {
         if (confirm == 'Y' || confirm == 'y') {
             // Delegate export to strategy (DIP: depends on abstraction)
             java.nio.file.Path exportedFile = exportStrategy.export(report, fileName);
+            
+            // Audit log
+            long executionTime = System.currentTimeMillis() - startTime;
+            context.getAuditLogger().log("REPORT_EXPORT", 
+                "Exported report for " + student.getName(), 
+                executionTime, true, null, 
+                "Student: " + studentId + ", Format: " + exportStrategy.getFormatName() + ", Grades: " + report.getGrades().size());
             
             System.out.println();
             System.out.println("Export successful!");
@@ -3058,7 +3086,450 @@ public class MenuHandler {
     }
     
     private void handleAuditTrail() {
-        System.out.println("AUDIT TRAIL - See original Main.java for full implementation");
-        System.out.println("This is a simplified demonstration of SOLID architecture.\n");
+        try {
+            System.out.println("AUDIT TRAIL VIEWER");
+            System.out.println("_______________________________________________");
+            System.out.println();
+            
+            // Get audit logger from ApplicationContext
+            AuditLogger auditLogger = context.getAuditLogger();
+            if (auditLogger == null) {
+                System.out.println("X Audit logger not initialized.");
+                System.out.println();
+                return;
+            }
+            
+            // Create audit trail viewer
+            AuditTrailViewer viewer = new AuditTrailViewer(auditLogger);
+            
+            System.out.println("Audit Trail Options:");
+            System.out.println("1. View Recent Audit Entries");
+            System.out.println("2. Filter by Operation Type");
+            System.out.println("3. Filter by Date Range");
+            System.out.println("4. Search by Keyword");
+            System.out.println("5. Export Audit Log");
+            System.out.println("6. Return to Main Menu");
+            System.out.println();
+            
+            System.out.print("Select option (1-6): ");
+            int auditOption;
+            try {
+                auditOption = ui.getScanner().nextInt();
+                ui.getScanner().nextLine();
+            } catch (InputMismatchException e) {
+                ui.getScanner().nextLine();
+                throw new InvalidMenuChoiceException("Please enter a valid number (1-6).");
+            }
+            
+            System.out.println();
+            
+            switch (auditOption) {
+                case 1:
+                    // View Recent Audit Entries
+                    viewRecentAuditEntries(viewer);
+                    break;
+                    
+                case 2:
+                    // Filter by Operation Type
+                    filterByOperationType(viewer);
+                    break;
+                    
+                case 3:
+                    // Filter by Date Range
+                    filterByDateRange(viewer);
+                    break;
+                    
+                case 4:
+                    // Search by Keyword
+                    searchByKeyword(viewer);
+                    break;
+                    
+                case 5:
+                    // Export Audit Log
+                    exportAuditLog(viewer);
+                    break;
+                    
+                case 6:
+                    // Return to Main Menu
+                    return;
+                    
+                default:
+                    throw new InvalidMenuChoiceException("Invalid option. Please select 1-6.");
+            }
+            
+        } catch (InvalidMenuChoiceException e) {
+            System.out.println();
+            System.out.println(e.getMessage());
+            System.out.println();
+        } catch (Exception e) {
+            System.out.println();
+            System.out.println("X ERROR: " + e.getClass().getSimpleName() + "\n   " + e.getMessage());
+            System.out.println();
+        }
+    }
+    
+    /**
+     * View recent audit entries with pagination
+     */
+    private void viewRecentAuditEntries(AuditTrailViewer viewer) {
+        System.out.println("VIEW RECENT AUDIT ENTRIES");
+        System.out.println("_______________________________________________");
+        System.out.println();
+        
+        System.out.print("Number of entries to display (max 100): ");
+        int count;
+        try {
+            count = ui.getScanner().nextInt();
+            ui.getScanner().nextLine();
+            
+            if (count < 1 || count > 100) {
+                System.out.println();
+                System.out.println("Please enter a number between 1 and 100.");
+                System.out.println();
+                return;
+            }
+        } catch (InputMismatchException e) {
+            ui.getScanner().nextLine();
+            System.out.println();
+            System.out.println("Invalid input. Please enter a valid number.");
+            System.out.println();
+            return;
+        }
+        
+        System.out.println();
+        System.out.println("Loading audit entries...");
+        
+        // Flush pending audit entries before reading
+        AuditLogger auditLogger = context.getAuditLogger();
+        if (auditLogger != null) {
+            auditLogger.flush();
+        }
+        
+        System.out.println();
+        
+        java.util.List<AuditLogger.EnhancedAuditEntry> entries = viewer.getRecentEntries(count);
+        
+        if (entries.isEmpty()) {
+            System.out.println("No audit entries found.");
+            System.out.println();
+            return;
+        }
+        
+        displayAuditEntries(entries, viewer);
+    }
+    
+    /**
+     * Filter audit entries by operation type
+     */
+    private void filterByOperationType(AuditTrailViewer viewer) {
+        System.out.println("FILTER BY OPERATION TYPE");
+        System.out.println("_______________________________________________");
+        System.out.println();
+        
+        // Get recent entries first
+        java.util.List<AuditLogger.EnhancedAuditEntry> allEntries = viewer.getRecentEntries(1000);
+        
+        if (allEntries.isEmpty()) {
+            System.out.println("No audit entries found.");
+            System.out.println();
+            return;
+        }
+        
+        // Get unique operation types
+        Set<String> operationTypes = viewer.getOperationTypes(allEntries);
+        
+        System.out.println("Available Operation Types:");
+        java.util.List<String> typesList = new java.util.ArrayList<>(operationTypes);
+        java.util.Collections.sort(typesList);
+        
+        for (int i = 0; i < typesList.size(); i++) {
+            System.out.printf("%d. %s%n", i + 1, typesList.get(i));
+        }
+        System.out.println();
+        
+        System.out.print("Select operation type (1-" + typesList.size() + "): ");
+        int typeChoice;
+        try {
+            typeChoice = ui.getScanner().nextInt();
+            ui.getScanner().nextLine();
+            
+            if (typeChoice < 1 || typeChoice > typesList.size()) {
+                System.out.println();
+                System.out.println("Invalid selection.");
+                System.out.println();
+                return;
+            }
+        } catch (InputMismatchException e) {
+            ui.getScanner().nextLine();
+            System.out.println();
+            System.out.println("Invalid input. Please enter a valid number.");
+            System.out.println();
+            return;
+        }
+        
+        System.out.println();
+        
+        String selectedType = typesList.get(typeChoice - 1);
+        java.util.List<AuditLogger.EnhancedAuditEntry> filteredEntries = 
+            viewer.filterByOperationType(allEntries, selectedType);
+        
+        System.out.println("Filtered by: " + selectedType);
+        System.out.println();
+        
+        displayAuditEntries(filteredEntries, viewer);
+    }
+    
+    /**
+     * Filter audit entries by date range
+     */
+    private void filterByDateRange(AuditTrailViewer viewer) {
+        System.out.println("FILTER BY DATE RANGE");
+        System.out.println("_______________________________________________");
+        System.out.println();
+        
+        System.out.println("Enter date range (format: yyyy-MM-dd)");
+        System.out.println();
+        
+        System.out.print("Start date: ");
+        String startDateStr = ui.getScanner().nextLine().trim();
+        
+        System.out.print("End date: ");
+        String endDateStr = ui.getScanner().nextLine().trim();
+        System.out.println();
+        
+        try {
+            java.time.LocalDateTime startDate = java.time.LocalDate.parse(
+                startDateStr, java.time.format.DateTimeFormatter.ISO_LOCAL_DATE).atStartOfDay();
+            java.time.LocalDateTime endDate = java.time.LocalDate.parse(
+                endDateStr, java.time.format.DateTimeFormatter.ISO_LOCAL_DATE).atTime(23, 59, 59);
+            
+            if (startDate.isAfter(endDate)) {
+                System.out.println("Start date must be before end date.");
+                System.out.println();
+                return;
+            }
+            
+            System.out.println("Loading audit entries...");
+            System.out.println();
+            
+            // Get all entries in date range
+            AuditLogger auditLogger = context.getAuditLogger();
+            java.util.List<AuditLogger.EnhancedAuditEntry> entries = 
+                auditLogger.readAuditEntries(startDate, endDate);
+            
+            if (entries.isEmpty()) {
+                System.out.println("No audit entries found in the specified date range.");
+                System.out.println();
+                return;
+            }
+            
+            // Sort by timestamp descending
+            entries.sort((a, b) -> {
+                java.time.LocalDateTime timeA = java.time.LocalDateTime.parse(
+                    a.getTimestamp(), java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+                java.time.LocalDateTime timeB = java.time.LocalDateTime.parse(
+                    b.getTimestamp(), java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+                return timeB.compareTo(timeA);
+            });
+            
+            System.out.printf("Date Range: %s to %s%n", startDateStr, endDateStr);
+            System.out.println();
+            
+            displayAuditEntries(entries, viewer);
+            
+        } catch (java.time.format.DateTimeParseException e) {
+            System.out.println("Invalid date format. Please use yyyy-MM-dd (e.g., 2025-12-17)");
+            System.out.println();
+        }
+    }
+    
+    /**
+     * Search audit entries by keyword
+     */
+    private void searchByKeyword(AuditTrailViewer viewer) {
+        System.out.println("SEARCH BY KEYWORD");
+        System.out.println("_______________________________________________");
+        System.out.println();
+        
+        System.out.print("Enter search keyword: ");
+        String keyword = ui.getScanner().nextLine().trim();
+        System.out.println();
+        
+        if (keyword.isEmpty()) {
+            System.out.println("Keyword cannot be empty.");
+            System.out.println();
+            return;
+        }
+        
+        System.out.println("Searching audit entries...");
+        System.out.println();
+        
+        // Get recent entries
+        java.util.List<AuditLogger.EnhancedAuditEntry> allEntries = viewer.getRecentEntries(1000);
+        
+        if (allEntries.isEmpty()) {
+            System.out.println("No audit entries found.");
+            System.out.println();
+            return;
+        }
+        
+        // Filter by keyword (case-insensitive search in user action and details)
+        java.util.List<AuditLogger.EnhancedAuditEntry> matchingEntries = allEntries.stream()
+            .filter(entry -> {
+                String lowerKeyword = keyword.toLowerCase();
+                boolean matchesUserAction = entry.getUserAction() != null && 
+                    entry.getUserAction().toLowerCase().contains(lowerKeyword);
+                boolean matchesDetails = entry.getDetails() != null && 
+                    entry.getDetails().toLowerCase().contains(lowerKeyword);
+                boolean matchesOperation = entry.getOperationType() != null && 
+                    entry.getOperationType().toLowerCase().contains(lowerKeyword);
+                return matchesUserAction || matchesDetails || matchesOperation;
+            })
+            .collect(java.util.stream.Collectors.toList());
+        
+        if (matchingEntries.isEmpty()) {
+            System.out.printf("No audit entries found matching keyword: \"%s\"%n", keyword);
+            System.out.println();
+            return;
+        }
+        
+        System.out.printf("Search Results for: \"%s\"%n", keyword);
+        System.out.println();
+        
+        displayAuditEntries(matchingEntries, viewer);
+    }
+    
+    /**
+     * Export audit log to file
+     */
+    private void exportAuditLog(AuditTrailViewer viewer) {
+        System.out.println("EXPORT AUDIT LOG");
+        System.out.println("_______________________________________________");
+        System.out.println();
+        
+        System.out.print("Enter filename (without extension): ");
+        String fileName = ui.getScanner().nextLine().trim();
+        System.out.println();
+        
+        if (fileName.isEmpty()) {
+            System.out.println("Filename cannot be empty.");
+            System.out.println();
+            return;
+        }
+        
+        System.out.println("Loading audit entries...");
+        
+        // Get recent entries
+        java.util.List<AuditLogger.EnhancedAuditEntry> entries = viewer.getRecentEntries(10000);
+        
+        if (entries.isEmpty()) {
+            System.out.println("No audit entries to export.");
+            System.out.println();
+            return;
+        }
+        
+        // Export to CSV format
+        String exportPath = "./reports/" + fileName + ".csv";
+        
+        try {
+            java.nio.file.Path filePath = java.nio.file.Paths.get(exportPath);
+            java.nio.file.Files.createDirectories(filePath.getParent());
+            
+            try (java.io.BufferedWriter writer = java.nio.file.Files.newBufferedWriter(filePath)) {
+                // Write CSV header
+                writer.write("Timestamp,Thread ID,Operation Type,User Action,Execution Time (ms),Status,Error Message,Details");
+                writer.newLine();
+                
+                // Write entries
+                for (AuditLogger.EnhancedAuditEntry entry : entries) {
+                    writer.write(String.format("\"%s\",%d,\"%s\",\"%s\",%d,\"%s\",\"%s\",\"%s\"",
+                        entry.getTimestamp(),
+                        entry.getThreadId(),
+                        entry.getOperationType(),
+                        entry.getUserAction(),
+                        entry.getExecutionTime(),
+                        entry.isSuccess() ? "SUCCESS" : "FAILED",
+                        entry.getErrorMessage() != null ? entry.getErrorMessage().replace("\"", "\"\"") : "",
+                        entry.getDetails() != null ? entry.getDetails().replace("\"", "\"\"") : ""));
+                    writer.newLine();
+                }
+            }
+            
+            long fileSize = java.nio.file.Files.size(filePath);
+            
+            System.out.println();
+            System.out.println("✓ Audit log exported successfully!");
+            System.out.println();
+            System.out.println("Export Details:");
+            System.out.printf("File: %s%n", exportPath);
+            System.out.printf("Entries: %d%n", entries.size());
+            System.out.printf("File Size: %s%n", formatFileSize(fileSize));
+            System.out.println();
+            
+        } catch (java.io.IOException e) {
+            System.out.println();
+            System.out.println("X ERROR: Failed to export audit log: " + e.getMessage());
+            System.out.println();
+        }
+    }
+    
+    /**
+     * Display audit entries with statistics
+     */
+    private void displayAuditEntries(java.util.List<AuditLogger.EnhancedAuditEntry> entries, 
+                                    AuditTrailViewer viewer) {
+        // Display entries (limit to 50 for readability)
+        int displayLimit = Math.min(entries.size(), 50);
+        
+        System.out.printf("%-19s | %-8s | %-20s | %-30s | %-8s | %-8s%n",
+            "TIMESTAMP", "THREAD", "OPERATION", "USER ACTION", "TIME(ms)", "STATUS");
+        System.out.println("_______________________________________________");
+        
+        for (int i = 0; i < displayLimit; i++) {
+            AuditLogger.EnhancedAuditEntry entry = entries.get(i);
+            
+            String timestamp = entry.getTimestamp().substring(0, Math.min(19, entry.getTimestamp().length()));
+            String operation = entry.getOperationType();
+            if (operation.length() > 20) operation = operation.substring(0, 17) + "...";
+            
+            String userAction = entry.getUserAction();
+            if (userAction.length() > 30) userAction = userAction.substring(0, 27) + "...";
+            
+            String status = entry.isSuccess() ? "SUCCESS" : "FAILED";
+            
+            System.out.printf("%-19s | %-8d | %-20s | %-30s | %-8d | %-8s%n",
+                timestamp,
+                entry.getThreadId(),
+                operation,
+                userAction,
+                entry.getExecutionTime(),
+                status);
+        }
+        
+        if (entries.size() > displayLimit) {
+            System.out.println("... and " + (entries.size() - displayLimit) + " more entries");
+        }
+        
+        System.out.println("_______________________________________________");
+        System.out.println();
+        
+        // Calculate and display statistics
+        AuditTrailViewer.AuditStatistics stats = viewer.calculateStatistics(entries);
+        
+        System.out.println("Audit Statistics:");
+        System.out.printf("Total Entries: %d%n", stats.getTotalOperations());
+        System.out.printf("Successful: %d (%.1f%%)%n", 
+            stats.getSuccessfulOperations(), 
+            stats.getSuccessRate());
+        System.out.printf("Failed: %d (%.1f%%)%n", 
+            stats.getFailedOperations(), 
+            (100.0 - stats.getSuccessRate()));
+        System.out.println();
+        
+        System.out.println("Performance Metrics:");
+        System.out.printf("Avg Execution Time: %.2fms%n", stats.getAvgExecutionTime());
+        System.out.printf("Min Execution Time: %dms%n", stats.getMinExecutionTime());
+        System.out.printf("Max Execution Time: %dms%n", stats.getMaxExecutionTime());
+        System.out.println();
     }
 }
