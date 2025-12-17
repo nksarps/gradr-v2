@@ -1,5 +1,7 @@
 package com.gradr;
 
+import com.gradr.exceptions.InvalidMenuChoiceException;
+
 /**
  * MenuHandler - Handles menu-driven application flow
  * Adheres to Single Responsibility Principle - responsible only for menu navigation
@@ -151,6 +153,8 @@ public class MenuHandler {
         System.out.println("\nStudent type:");
         System.out.println("1. Regular Student");
         System.out.println("2. Honors Student");
+
+        System.out.println();
         System.out.print("Select type (1-2): ");
         int type = ui.getScanner().nextInt();
         ui.getScanner().nextLine();
@@ -164,6 +168,7 @@ public class MenuHandler {
         cacheManager.put("student:" + student.getStudentId(), student, CacheManager.CacheType.STUDENT);
         
         // Display complete student details
+        System.out.println();
         System.out.println("Student added successfully!");
         System.out.println("All inputs validated with regex patterns");
         System.out.println();
@@ -205,8 +210,145 @@ public class MenuHandler {
     }
     
     private void handleRecordGrade() throws Exception {
-        System.out.println("RECORD GRADE - See original Main.java for full implementation");
-        System.out.println("This is a simplified demonstration of SOLID architecture.\n");
+        System.out.println("RECORD GRADE");
+        System.out.println("_______________________________________________");
+        System.out.println();
+
+        System.out.print("Enter Student ID: ");
+        String studentId = ui.getScanner().nextLine();
+        System.out.println();
+
+        // Find student (try cache first)
+        Student student = findStudentWithCache(studentId);
+        
+        // Display student details
+        System.out.println("Student Details:");
+        System.out.printf("Name: %s\n", student.getName());
+        System.out.printf("Type: %s Student\n", student.getStudentType());
+        System.out.printf("Current Average: %.1f%%\n", student.calculateAverageGrade());
+        System.out.println();
+
+        // Get subject type using factory (OCP)
+        System.out.println("Subject type:");
+        System.out.println("1. Core Subject (Mathematics, English, Science)");
+        System.out.println("2. Elective Subject (Music, Art, Physical Education)\n");
+
+        System.out.print("Select type (1-2): ");
+        int subjectTypeChoice = ui.getScanner().nextInt();
+        ui.getScanner().nextLine();
+        
+        if (subjectTypeChoice < 1 || subjectTypeChoice > 2) {
+            throw new InvalidMenuChoiceException(
+                "X ERROR: InvalidMenuChoiceException\n   Please select a valid option (1-2).\n   You entered: " + subjectTypeChoice
+            );
+        }
+
+        // Use SubjectFactory to create subject (OCP)
+        Subject subject = SubjectFactory.createSubject(subjectTypeChoice);
+        String subjectType = subject.getSubjectType();
+        
+        System.out.println();
+        System.out.printf("Available %s Subjects\n", subjectType);
+        
+        if (subjectType.equals("Core")) {
+            System.out.println("1. Mathematics");
+            System.out.println("2. English");
+            System.out.println("3. Science");
+        } else {
+            System.out.println("1. Music");
+            System.out.println("2. Art");
+            System.out.println("3. Physical Education");
+        }
+        System.out.println();
+
+        System.out.print("Select subject (1-3): ");
+        int subjectChoice = ui.getScanner().nextInt();
+        ui.getScanner().nextLine();
+
+        if (subjectChoice < 1 || subjectChoice > 3) {
+            throw new InvalidMenuChoiceException(
+                "X ERROR: InvalidMenuChoiceException\n   Please select a valid option (1-3).\n   You entered: " + subjectChoice
+            );
+        }
+
+        // Use SubjectFactory to set subject name (OCP)
+        SubjectFactory.setSubjectName(subject, subjectTypeChoice, subjectChoice);
+        
+        System.out.println();
+        System.out.print("Enter grade (0-100): ");
+        String gradeInputStr = ui.getScanner().nextLine();
+        
+        // Validate grade using ValidationUtils
+        ValidationUtils.validateGrade(gradeInputStr);
+        int gradeInput = Integer.parseInt(gradeInputStr);
+        ValidationUtils.validateGrade(gradeInput);
+
+        // Create grade
+        Grade grade = new Grade(studentId, subject, gradeInput);
+
+        // Validate and record grade
+        if (grade.recordGrade(gradeInput)) {
+            grade.setGradeId();
+
+            // Display confirmation
+            System.out.println("GRADE CONFIRMATION");
+            System.out.println("_______________________________________________________");
+            System.out.printf("Grade ID: %s\n", grade.getGradeId());
+            System.out.printf("Student: %s - %s\n", studentId, student.getName());
+            System.out.printf("Subject: %s (%s)\n", subject.getSubjectName(), subject.getSubjectType());
+            System.out.printf("Grade: %.1f%%\n", (double) gradeInput);
+            System.out.printf("Date: %s\n", grade.getDate());
+            System.out.println("______________________________________________________\n");
+
+            System.out.print("Confirm grade? (Y/N): ");
+            char confirmGrade = ui.getScanner().next().charAt(0);
+            ui.getScanner().nextLine();
+
+            if (confirmGrade == 'Y' || confirmGrade == 'y') {
+                gradeManager.addGrade(grade);
+                
+                // Invalidate caches (grades changed)
+                cacheManager.invalidateByType(CacheManager.CacheType.GRADE_REPORT);
+                cacheManager.invalidateByType(CacheManager.CacheType.STATISTICS);
+
+                // Update GPA rankings
+                GPACalculator gpaCalc = new GPACalculator(gradeManager);
+                double gpa = gpaCalc.calculateCumulativeGPA(studentId);
+                gradeManager.updateGPARanking(student, gpa);
+                
+                // Schedule task for grade processing
+                Task gradeTask = new Task(Task.TaskType.GRADE_PROCESSING, 
+                        "Process grade for " + student.getName(), studentId);
+                gradeManager.scheduleTask(gradeTask);
+                
+                System.out.println("Grade added successfully.\n");
+            } else if (confirmGrade == 'N' || confirmGrade == 'n') {
+                Grade.gradeCounter--;
+                System.out.println("Grade record cancelled\n");
+            } else {
+                Grade.gradeCounter--;
+                throw new InvalidMenuChoiceException(
+                    "X ERROR: InvalidMenuChoiceException\n   Please enter Y or N.\n   You entered: " + confirmGrade
+                );
+            }
+        }
+    }
+    
+    /**
+     * Helper method to find student with caching (DRY principle)
+     */
+    private Student findStudentWithCache(String studentId) throws Exception {
+        String cacheKey = "student:" + studentId;
+        Student cachedStudent = (Student) cacheManager.get(cacheKey);
+        
+        if (cachedStudent != null) {
+            return cachedStudent; // Cache hit
+        } else {
+            // Cache miss - fetch and cache
+            Student student = studentManager.findStudent(studentId);
+            cacheManager.put(cacheKey, student, CacheManager.CacheType.STUDENT);
+            return student;
+        }
     }
     
     private void handleViewGradeReport() throws Exception {
