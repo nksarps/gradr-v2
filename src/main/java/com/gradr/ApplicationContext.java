@@ -52,7 +52,9 @@ public class ApplicationContext {
     private BinaryExportStrategy binaryExportStrategy;
     
     /**
-     * Constructor - wires up all dependencies
+     * Initializes the application context with all configured dependencies.
+     * Creates and wires up repositories, services, managers, and utilities.
+     * Warms the cache and registers shutdown hooks for cleanup.
      */
     public ApplicationContext() throws FileExportException {
         // Create repositories first (no dependencies)
@@ -99,56 +101,58 @@ public class ApplicationContext {
     }
     
     /**
-     * Get student manager
+     * Returns the student manager facade for student operations.
      */
     public StudentManager getStudentManager() {
         return studentManager;
     }
     
     /**
-     * Get grade manager
+     * Returns the grade manager facade for grade operations.
      */
     public GradeManager getGradeManager() {
         return gradeManager;
     }
     
     /**
-     * Get audit logger
+     * Returns the audit logger for tracking system operations.
      */
     public AuditLogger getAuditLogger() {
         return auditLogger;
     }
     
     /**
-     * Get cache manager
+     * Returns the cache manager for performance optimization.
      */
     public CacheManager getCacheManager() {
         return cacheManager;
     }
     
     /**
-     * Get pattern search service
+     * Returns the pattern search service for regex-based student searches.
      */
     public PatternSearchService getPatternSearchService() {
         return patternSearchService;
     }
     
     /**
-     * Get performance monitor
+     * Returns the performance monitor for system metrics tracking.
      */
     public SystemPerformanceMonitor getPerformanceMonitor() {
         return performanceMonitor;
     }
     
     /**
-     * Get or initialize task scheduler
+     * Returns the task scheduler for automated task execution.
+     * May be null if not yet initialized.
      */
     public TaskScheduler getTaskScheduler() {
         return taskScheduler;
     }
     
     /**
-     * Set task scheduler (initialized on first use)
+     * Sets the task scheduler instance for the application.
+     * Should be called once when the scheduler is first initialized.
      */
     public void setTaskScheduler(TaskScheduler taskScheduler) {
         this.taskScheduler = taskScheduler;
@@ -156,49 +160,52 @@ public class ApplicationContext {
     }
     
     /**
-     * Check if task scheduler is initialized
+     * Checks whether the task scheduler has been initialized.
      */
     public boolean isTaskSchedulerInitialized() {
         return taskSchedulerInitialized;
     }
     
     /**
-     * Get or initialize statistics dashboard
+     * Returns the statistics dashboard for real-time metrics display.
+     * May be null if not yet initialized.
      */
     public StatisticsDashboard getStatisticsDashboard() {
         return statisticsDashboard;
     }
     
     /**
-     * Set statistics dashboard (initialized on first use)
+     * Sets the statistics dashboard instance for the application.
+     * Should be called once when the dashboard is first initialized.
      */
     public void setStatisticsDashboard(StatisticsDashboard dashboard) {
         this.statisticsDashboard = dashboard;
     }
     
     /**
-     * Get CSV export strategy
+     * Returns the CSV export strategy for generating CSV reports.
      */
     public CSVExportStrategy getCsvExportStrategy() {
         return csvExportStrategy;
     }
     
     /**
-     * Get JSON export strategy
+     * Returns the JSON export strategy for generating JSON reports.
      */
     public JSONExportStrategy getJsonExportStrategy() {
         return jsonExportStrategy;
     }
     
     /**
-     * Get binary export strategy
+     * Returns the binary export strategy for generating serialized reports.
      */
     public BinaryExportStrategy getBinaryExportStrategy() {
         return binaryExportStrategy;
     }
     
     /**
-     * Get export strategy by format choice
+     * Returns the appropriate export strategy based on format choice.
+     * 1 = CSV, 2 = JSON, 3 = Binary.
      */
     public FileExportStrategy getExportStrategy(int formatChoice) {
         switch (formatChoice) {
@@ -210,7 +217,8 @@ public class ApplicationContext {
     }
     
     /**
-     * Shutdown - cleanup resources
+     * Gracefully shuts down all services and releases resources.
+     * Called automatically via shutdown hook on JVM exit.
      */
     public void shutdown() {
         if (taskScheduler != null) {
