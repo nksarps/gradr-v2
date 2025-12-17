@@ -352,8 +352,48 @@ public class MenuHandler {
     }
     
     private void handleViewGradeReport() throws Exception {
-        System.out.println("VIEW GRADE REPORT - See original Main.java for full implementation");
-        System.out.println("This is a simplified demonstration of SOLID architecture.\n");
+        System.out.println("VIEW GRADE REPORT");
+        System.out.println("_______________________________________________");
+        System.out.println();
+
+        System.out.print("Enter Student ID: ");
+        String studentId = ui.getScanner().nextLine();
+        System.out.println();
+
+        // Find student (try cache first) - DIP: depends on abstraction
+        Student student = findStudentWithCache(studentId);
+        
+        // Display student information
+        System.out.println("STUDENT INFORMATION");
+        System.out.println("-------------------------------------------------------------------------------------");
+        System.out.printf("Student ID: %s\n", student.getStudentId());
+        System.out.printf("Name: %s\n", student.getName());
+        System.out.printf("Type: %s Student\n", student.getStudentType());
+        System.out.printf("Age: %d\n", student.getAge());
+        System.out.printf("Email: %s\n", student.getEmail());
+        System.out.printf("Phone: %s\n", student.getPhone());
+        System.out.println("-------------------------------------------------------------------------------------");
+        System.out.println();
+
+        // Check cache for grade report (SRP: cache handling separated)
+        String cacheKey = "grade_report:" + studentId;
+        String cachedReport = (String) cacheManager.get(cacheKey);
+        
+        String gradeReport;
+        if (cachedReport != null) {
+            // Cache hit
+            gradeReport = cachedReport;
+        } else {
+            // Cache miss - delegate to GradeManager (DIP: depends on abstraction)
+            gradeReport = gradeManager.viewGradesByStudent(studentId);
+            
+            // Cache the result
+            cacheManager.put(cacheKey, gradeReport, CacheManager.CacheType.GRADE_REPORT);
+        }
+        
+        // Display grade report
+        System.out.print(gradeReport);
+        System.out.println();
     }
     
     private void handleExportReport() throws Exception {
