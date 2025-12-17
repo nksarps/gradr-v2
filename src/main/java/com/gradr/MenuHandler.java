@@ -1,6 +1,7 @@
 package com.gradr;
 
 import com.gradr.exceptions.InvalidMenuChoiceException;
+import java.util.InputMismatchException;
 import java.util.List;
 
 /**
@@ -128,8 +129,6 @@ public class MenuHandler {
     }
     
     // ========== Command Handlers ==========
-    // NOTE: These are simplified stubs. Full implementation in original Main.java
-    // For production, each handler would be extracted to separate Command classes
     
     private void handleAddStudent() throws Exception {
         System.out.println("ADD STUDENT");
@@ -1707,8 +1706,188 @@ public class MenuHandler {
     }
     
     private void handlePatternSearch() {
-        System.out.println("PATTERN SEARCH - See original Main.java for full implementation");
-        System.out.println("This is a simplified demonstration of SOLID architecture.\n");
+        try {
+            System.out.println("PATTERN-BASED SEARCH");
+            System.out.println("_______________________________________________");
+            System.out.println();
+            
+            PatternSearchService searchService = context.getPatternSearchService();
+            
+            System.out.println("Search Type:");
+            System.out.println("1. Email Domain Pattern (e.g., @university.edu)");
+            System.out.println("2. Phone Area Code Pattern (e.g., 555)");
+            System.out.println("3. Student ID Pattern (e.g., STU0**)");
+            System.out.println("4. Name Pattern (regex)");
+            System.out.println("5. Custom Regex Pattern");
+            System.out.println();
+            
+            System.out.print("Select type (1-5): ");
+            int searchTypeChoice;
+            try {
+                searchTypeChoice = ui.getScanner().nextInt();
+                ui.getScanner().nextLine();
+            } catch (InputMismatchException e) {
+                ui.getScanner().nextLine();
+                throw new InvalidMenuChoiceException("Please enter a valid number (1-5).");
+            }
+            
+            System.out.println();
+            System.out.print("Case-insensitive search? (Y/N): ");
+            String caseInsensitiveInput = ui.getScanner().nextLine().trim().toUpperCase();
+            boolean caseInsensitive = caseInsensitiveInput.equals("Y");
+            System.out.println();
+            
+            PatternSearchService.SearchResults searchResults = null;
+            String patternInput = "";
+            
+            switch (searchTypeChoice) {
+                case 1:
+                    // Email Domain Pattern
+                    System.out.print("Enter email domain (e.g., @university.edu): ");
+                    patternInput = ui.getScanner().nextLine().trim();
+                    if (!patternInput.startsWith("@")) {
+                        patternInput = "@" + patternInput;
+                    }
+                    System.out.println();
+                    searchResults = searchService.searchByEmailDomain(patternInput, caseInsensitive);
+                    break;
+                    
+                case 2:
+                    // Phone Area Code Pattern
+                    System.out.print("Enter area code (e.g., 555): ");
+                    patternInput = ui.getScanner().nextLine().trim();
+                    System.out.println();
+                    searchResults = searchService.searchByPhoneAreaCode(patternInput, caseInsensitive);
+                    break;
+                    
+                case 3:
+                    // Student ID Pattern
+                    System.out.print("Enter Student ID pattern (e.g., STU0**): ");
+                    patternInput = ui.getScanner().nextLine().trim();
+                    System.out.println();
+                    searchResults = searchService.searchByStudentIdPattern(patternInput, caseInsensitive);
+                    break;
+                    
+                case 4:
+                    // Name Pattern
+                    System.out.print("Enter name pattern (regex): ");
+                    patternInput = ui.getScanner().nextLine().trim();
+                    System.out.println();
+                    searchResults = searchService.searchByNamePattern(patternInput, caseInsensitive);
+                    break;
+                    
+                case 5:
+                    // Custom Regex Pattern
+                    System.out.println("Custom Regex Search");
+                    System.out.println("1. Search in Names");
+                    System.out.println("2. Search in Emails");
+                    System.out.println("3. Search in Phones");
+                    System.out.println("4. Search in Student IDs");
+                    System.out.println();
+                    
+                    System.out.print("Select field (1-4): ");
+                    int fieldChoice;
+                    try {
+                        fieldChoice = ui.getScanner().nextInt();
+                        ui.getScanner().nextLine();
+                    } catch (InputMismatchException e) {
+                        ui.getScanner().nextLine();
+                        throw new InvalidMenuChoiceException("Please enter a valid number (1-4).");
+                    }
+                    
+                    System.out.println();
+                    System.out.print("Enter regex pattern: ");
+                    patternInput = ui.getScanner().nextLine().trim();
+                    System.out.println();
+                    
+                    String fieldName;
+                    switch (fieldChoice) {
+                        case 1: fieldName = "name"; break;
+                        case 2: fieldName = "email"; break;
+                        case 3: fieldName = "phone"; break;
+                        case 4: fieldName = "studentId"; break;
+                        default: throw new InvalidMenuChoiceException("Invalid field choice. Please select 1-4.");
+                    }
+                    
+                    searchResults = searchService.searchByCustomPattern(fieldName, patternInput, caseInsensitive);
+                    break;
+                    
+                default:
+                    throw new InvalidMenuChoiceException("Invalid search type. Please select 1-5.");
+            }
+            
+            if (searchResults == null) {
+                throw new IllegalStateException("Search operation failed to return results.");
+            }
+            
+            // Display results
+            List<PatternSearchService.SearchResult> results = searchResults.getResults();
+            PatternSearchService.SearchStatistics stats = searchResults.getStatistics();
+            
+            System.out.println("SEARCH RESULTS (" + results.size() + " found)");
+            System.out.println("_______________________________________________");
+            System.out.println();
+            
+            if (results.isEmpty()) {
+                System.out.println("No students match the pattern: " + patternInput);
+                System.out.println();
+            } else {
+                System.out.printf("%-10s | %-20s | %-12s | %-25s | %-12s%n", 
+                    "STUDENT ID", "NAME", "TYPE", "MATCH FIELD", "MATCHED VALUE");
+                System.out.println("_______________________________________________");
+                
+                for (PatternSearchService.SearchResult result : results) {
+                    System.out.printf("%-10s | %-20s | %-12s | %-25s | %-12s%n",
+                        result.getStudent().getStudentId(),
+                        result.getStudent().getName().length() > 20 ? 
+                            result.getStudent().getName().substring(0, 17) + "..." : result.getStudent().getName(),
+                        result.getStudent().getStudentType(),
+                        result.getMatchedField(),
+                        result.getMatchedText().length() > 12 ? 
+                            result.getMatchedText().substring(0, 9) + "..." : result.getMatchedText());
+                }
+                System.out.println("_______________________________________________");
+                System.out.println();
+                
+                // Display statistics
+                System.out.println("SEARCH STATISTICS");
+                System.out.println("_______________________________________________");
+                System.out.println("Total Scanned: " + stats.getTotalScanned());
+                System.out.println("Matches Found: " + stats.getMatchesFound());
+                System.out.println("Match Rate: " + String.format("%.1f", stats.getMatchPercentage()) + "%");
+                System.out.println("Search Time: " + stats.getSearchTime() + "ms");
+                System.out.println("Regex Complexity: " + stats.getRegexComplexity());
+                System.out.println();
+                
+                // Display distribution by student type
+                System.out.println("Distribution by Type:");
+                int regularCount = 0;
+                int honorsCount = 0;
+                for (PatternSearchService.SearchResult result : results) {
+                    if (result.getStudent().getStudentType().equals("Regular")) {
+                        regularCount++;
+                    } else {
+                        honorsCount++;
+                    }
+                }
+                System.out.println("  Regular Students: " + regularCount);
+                System.out.println("  Honors Students: " + honorsCount);
+                System.out.println();
+            }
+            
+        } catch (IllegalArgumentException e) {
+            System.out.println();
+            System.out.println(e.getMessage());
+            System.out.println();
+        } catch (InvalidMenuChoiceException e) {
+            System.out.println();
+            System.out.println(e.getMessage());
+            System.out.println();
+        } catch (Exception e) {
+            System.out.println();
+            System.out.println("X ERROR: " + e.getClass().getSimpleName() + "\n   " + e.getMessage());
+            System.out.println();
+        }
     }
     
     private void handleQueryGradeHistory() {
