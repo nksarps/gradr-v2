@@ -1158,8 +1158,286 @@ public class MenuHandler {
     }
     
     private void handleBatchReports() {
-        System.out.println("BATCH REPORTS - See original Main.java for full implementation");
-        System.out.println("This is a simplified demonstration of SOLID architecture.\n");
+        try {
+            System.out.println("GENERATE BATCH REPORTS");
+            System.out.println("_______________________________________________");
+            System.out.println();
+            
+            // Report Scope
+            System.out.println("Report Scope:");
+            System.out.println("1. All Students (" + studentManager.getStudentCount() + " students)");
+            System.out.println("2. By Student Type (Regular/Honors)");
+            System.out.println("3. By Grade Range");
+            System.out.println("4. Custom Selection");
+            System.out.println();
+            
+            System.out.print("Select scope (1-4): ");
+            int scopeChoice = ui.getScanner().nextInt();
+            ui.getScanner().nextLine();
+            
+            if (scopeChoice < 1 || scopeChoice > 4) {
+                throw new InvalidMenuChoiceException(
+                    "X ERROR: InvalidMenuChoiceException\n   Please select a valid option (1-4).\n   You entered: " + scopeChoice
+                );
+            }
+            
+            System.out.println();
+            System.out.println("Report Format:");
+            System.out.println("1. CSV (Comma-Separated Values)");
+            System.out.println("2. JSON (JavaScript Object Notation)");
+            System.out.println("3. Binary (Serialized Java Object)");
+            System.out.println("4. All formats");
+            System.out.println();
+            
+            System.out.print("Select format (1-4): ");
+            int formatChoice = ui.getScanner().nextInt();
+            ui.getScanner().nextLine();
+            
+            if (formatChoice < 1 || formatChoice > 4) {
+                throw new InvalidMenuChoiceException(
+                    "X ERROR: InvalidMenuChoiceException\n   Please select a valid option (1-4).\n   You entered: " + formatChoice
+                );
+            }
+            
+            System.out.println();
+            System.out.println("Report Type:");
+            System.out.println("1. Summary Report");
+            System.out.println("2. Detailed Report");
+            System.out.println("3. Transcript Format");
+            System.out.println("4. Performance Analytics");
+            System.out.println();
+            
+            System.out.print("Select type (1-4): ");
+            int reportTypeChoice = ui.getScanner().nextInt();
+            ui.getScanner().nextLine();
+            
+            if (reportTypeChoice < 1 || reportTypeChoice > 4) {
+                throw new InvalidMenuChoiceException(
+                    "X ERROR: InvalidMenuChoiceException\n   Please select a valid option (1-4).\n   You entered: " + reportTypeChoice
+                );
+            }
+            
+            String reportType;
+            switch (reportTypeChoice) {
+                case 1: reportType = "summary"; break;
+                case 2: reportType = "detailed"; break;
+                case 3: reportType = "transcript"; break;
+                case 4: reportType = "analytics"; break;
+                default: reportType = "detailed"; break;
+            }
+            
+            System.out.println();
+            System.out.println("Concurrency Settings:");
+            int availableProcessors = Runtime.getRuntime().availableProcessors();
+            System.out.println("Available Processors: " + availableProcessors);
+            int recommendedMin = Math.max(2, availableProcessors / 2);
+            int recommendedMax = Math.min(8, availableProcessors);
+            System.out.println("Recommended Threads: " + recommendedMin + "-" + recommendedMax);
+            System.out.println();
+            
+            System.out.print("Enter number of threads (1-8): ");
+            int threadCount = ui.getScanner().nextInt();
+            ui.getScanner().nextLine();
+            
+            if (threadCount < 1 || threadCount > 8) {
+                throw new InvalidMenuChoiceException(
+                    "X ERROR: InvalidMenuChoiceException\n   Thread count must be between 1 and 8.\n   You entered: " + threadCount
+                );
+            }
+            
+            System.out.println();
+            System.out.println("Initializing thread pool...");
+            
+            // Initialize batch generator (SRP: separate batch generation logic)
+            BatchReportGenerator batchGenerator = new BatchReportGenerator(studentManager, gradeManager);
+            if (!batchGenerator.initializeThreadPool(threadCount)) {
+                System.out.println("X ERROR: Failed to initialize thread pool\n");
+                return;
+            }
+            
+            // Register thread pool with performance monitor if available
+            SystemPerformanceMonitor performanceMonitor = context.getPerformanceMonitor();
+            if (performanceMonitor != null && batchGenerator.getExecutorService() != null) {
+                performanceMonitor.registerThreadPool("BatchReportGenerator", 
+                    batchGenerator.getExecutorService(), threadCount);
+            }
+            
+            System.out.println("✓ Fixed Thread Pool created: " + threadCount + " threads");
+            System.out.println();
+            
+            // Get students based on scope (delegates to helper method - SRP)
+            java.util.List<Student> studentsToProcess = getStudentsByScope(scopeChoice);
+            
+            if (studentsToProcess.isEmpty()) {
+                System.out.println("No students found matching the selected scope.");
+                System.out.println();
+                batchGenerator.shutdown(5);
+                return;
+            }
+            
+            System.out.println("Processing " + studentsToProcess.size() + " student reports...");
+            System.out.println();
+            
+            // Generate batch reports (delegates to BatchReportGenerator - DIP)
+            BatchReportGenerator.BatchResult result = batchGenerator.generateBatchReports(
+                studentsToProcess, reportType, formatChoice
+            );
+            
+            // Shutdown thread pool
+            batchGenerator.shutdown(5);
+            
+            // Display results
+            System.out.println();
+            System.out.println("✓ BATCH GENERATION COMPLETED!");
+            System.out.println();
+            System.out.println("EXECUTION SUMMARY");
+            System.out.println("_______________________________________________");
+            System.out.println("Total Reports: " + result.getTotalReports());
+            System.out.println("Successful: " + result.getSuccessful());
+            System.out.println("Failed: " + result.getFailed());
+            System.out.println("Total Time: " + String.format("%.1f", result.getTotalTime() / 1000.0) + " seconds");
+            System.out.println("Avg Time per Report: " + String.format("%.0f", result.getAvgTimePerReport()) + "ms");
+            System.out.println("Sequential Processing (estimated): " + 
+                String.format("%.0f", result.getEstimatedSequential() / 1000.0) + " seconds");
+            System.out.println("Concurrent Processing (actual): " + 
+                String.format("%.1f", result.getTotalTime() / 1000.0) + " seconds");
+            double performanceGain = result.getEstimatedSequential() > 0 ? 
+                (double)result.getEstimatedSequential() / result.getTotalTime() : 1.0;
+            System.out.println("Performance Gain: " + String.format("%.1f", performanceGain) + "x faster");
+            System.out.println();
+            
+            BatchReportGenerator.ThreadPoolStats stats = batchGenerator.getThreadPoolStats();
+            System.out.println("Thread Pool Statistics:");
+            System.out.println("Peak Thread Count: " + stats.getPoolSize());
+            System.out.println("Total Tasks Executed: " + result.getTotalReports());
+            System.out.println("Average Queue Time: " + String.format("%.0f", 0.0) + "ms");
+            System.out.println("Thread Utilization: " + String.format("%.1f", stats.getThreadUtilization()) + "%");
+            System.out.println();
+            
+            System.out.println("Output Location: " + result.getOutputDir());
+            System.out.println("Total Files Generated: " + result.getSuccessful());
+            
+            // Calculate total file size
+            try {
+                long totalSize = java.nio.file.Files.walk(result.getOutputDir())
+                    .filter(java.nio.file.Files::isRegularFile)
+                    .mapToLong(p -> {
+                        try { return java.nio.file.Files.size(p); } 
+                        catch (java.io.IOException e) { return 0; }
+                    })
+                    .sum();
+                System.out.println("Total Size: " + formatFileSize(totalSize));
+            } catch (java.io.IOException e) {
+                // Ignore if we can't calculate size
+            }
+            System.out.println();
+            
+        } catch (InvalidMenuChoiceException e) {
+            System.out.println();
+            System.out.println(e.getMessage());
+            System.out.println();
+        } catch (Exception e) {
+            System.out.println();
+            System.out.println("X ERROR: " + e.getClass().getSimpleName() + "\n   " + e.getMessage());
+            System.out.println();
+        }
+    }
+    
+    /**
+     * Get students based on scope selection (SRP: separate scope filtering logic)
+     */
+    private java.util.List<Student> getStudentsByScope(int scopeChoice) throws Exception {
+        java.util.List<Student> studentsToProcess = new java.util.ArrayList<>();
+        
+        switch (scopeChoice) {
+            case 1: // All Students
+                studentsToProcess = new java.util.ArrayList<>(studentManager.getStudentsList());
+                break;
+                
+            case 2: // By Student Type
+                System.out.println("Student Type Filter:");
+                System.out.println("1. Regular Students only");
+                System.out.println("2. Honors Students only");
+                System.out.println("3. Both types");
+                System.out.println();
+                
+                System.out.print("Select type (1-3): ");
+                int typeChoice = ui.getScanner().nextInt();
+                ui.getScanner().nextLine();
+                
+                for (Student student : studentManager.getStudentsList()) {
+                    if (typeChoice == 1 && student.getStudentType().equals("Regular")) {
+                        studentsToProcess.add(student);
+                    } else if (typeChoice == 2 && student.getStudentType().equals("Honors")) {
+                        studentsToProcess.add(student);
+                    } else if (typeChoice == 3) {
+                        studentsToProcess.add(student);
+                    }
+                }
+                break;
+                
+            case 3: // By Grade Range
+                System.out.print("Enter minimum average grade (0-100): ");
+                double minGrade = ui.getScanner().nextDouble();
+                System.out.print("Enter maximum average grade (0-100): ");
+                double maxGrade = ui.getScanner().nextDouble();
+                ui.getScanner().nextLine();
+                System.out.println();
+                
+                for (Student student : studentManager.getStudentsList()) {
+                    double avg = student.calculateAverageGrade();
+                    if (avg >= minGrade && avg <= maxGrade) {
+                        studentsToProcess.add(student);
+                    }
+                }
+                break;
+                
+            case 4: // Custom Selection
+                System.out.println("Available Students:");
+                int index = 1;
+                for (Student student : studentManager.getStudentsList()) {
+                    System.out.printf("%d. %s (%s) - Avg: %.1f%%\n", 
+                        index++, student.getName(), student.getStudentId(), student.calculateAverageGrade());
+                }
+                System.out.println();
+                
+                System.out.print("Enter student numbers (comma-separated, e.g., 1,3,5): ");
+                String input = ui.getScanner().nextLine();
+                String[] indices = input.split(",");
+                
+                java.util.List<Student> allStudents = studentManager.getStudentsList();
+                for (String indexStr : indices) {
+                    try {
+                        int studentIndex = Integer.parseInt(indexStr.trim()) - 1;
+                        if (studentIndex >= 0 && studentIndex < allStudents.size()) {
+                            studentsToProcess.add(allStudents.get(studentIndex));
+                        }
+                    } catch (NumberFormatException e) {
+                        // Skip invalid indices
+                    }
+                }
+                break;
+                
+            default:
+                throw new InvalidMenuChoiceException("Invalid scope choice");
+        }
+        
+        return studentsToProcess;
+    }
+    
+    /**
+     * Format file size from bytes to human-readable format (SRP: separate formatting logic)
+     */
+    private String formatFileSize(long bytes) {
+        if (bytes < 1024) {
+            return bytes + " B";
+        } else if (bytes < 1024 * 1024) {
+            double kb = bytes / 1024.0;
+            return String.format("%.2f KB", kb);
+        } else {
+            double mb = bytes / (1024.0 * 1024.0);
+            return String.format("%.2f MB", mb);
+        }
     }
     
     private void handleAdvancedSearch() {
