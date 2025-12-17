@@ -513,8 +513,241 @@ public class MenuHandler {
     }
     
     private void handleImportData() throws Exception {
-        System.out.println("IMPORT DATA - See original Main.java for full implementation");
-        System.out.println("This is a simplified demonstration of SOLID architecture.\n");
+        System.out.println("IMPORT GRADE DATA (Multi-Format)");
+        System.out.println("_______________________________________________");
+        System.out.println();
+
+        System.out.println("Supported formats:");
+        System.out.println("1. CSV (Comma-Separated Values)");
+        System.out.println("2. JSON (JavaScript Object Notation)");
+        System.out.println("3. Binary (.dat file)");
+        System.out.println();
+
+        System.out.print("Select format (1-3): ");
+        int formatChoice = ui.getScanner().nextInt();
+        ui.getScanner().nextLine();
+
+        if (formatChoice < 1 || formatChoice > 3) {
+            throw new InvalidMenuChoiceException(
+                "X ERROR: InvalidMenuChoiceException\n   Please select a valid option (1-3).\n   You entered: " + formatChoice
+            );
+        }
+
+        System.out.println();
+        System.out.println("Place your file in the appropriate directory:");
+        System.out.println("  CSV:    ./data/csv/");
+        System.out.println("  JSON:   ./data/json/");
+        System.out.println("  Binary: ./data/binary/");
+        System.out.println();
+
+        System.out.print("Enter filename (without extension): ");
+        String fileName = ui.getScanner().nextLine();
+        System.out.println();
+
+        // Use MultiFormatFileHandler for import (SRP: file handling separated)
+        MultiFormatFileHandler fileHandler = new MultiFormatFileHandler();
+        StudentReport importedReport = null;
+        java.nio.file.Path filePath = null;
+
+        // Determine file path and import based on format (OCP: extensible for new formats)
+        switch (formatChoice) {
+            case 1: // CSV
+                filePath = java.nio.file.Paths.get("./data/csv/" + fileName + ".csv");
+                if (!java.nio.file.Files.exists(filePath)) {
+                    System.out.println("X ERROR: File not found: " + filePath);
+                    System.out.println();
+                    return;
+                }
+                System.out.println("Importing from CSV format...");
+                importedReport = importFromCSV(fileHandler, filePath);
+                break;
+
+            case 2: // JSON
+                filePath = java.nio.file.Paths.get("./data/json/" + fileName + ".json");
+                if (!java.nio.file.Files.exists(filePath)) {
+                    System.out.println("X ERROR: File not found: " + filePath);
+                    System.out.println();
+                    return;
+                }
+                System.out.println("Importing from JSON format...");
+                importedReport = fileHandler.importFromJSON(filePath);
+                break;
+
+            case 3: // Binary
+                filePath = java.nio.file.Paths.get("./data/binary/" + fileName + ".dat");
+                if (!java.nio.file.Files.exists(filePath)) {
+                    System.out.println("X ERROR: File not found: " + filePath);
+                    System.out.println();
+                    return;
+                }
+                System.out.println("Importing from Binary format...");
+                importedReport = fileHandler.importFromBinary(filePath);
+                break;
+        }
+
+        if (importedReport == null) {
+            System.out.println("X ERROR: Failed to import data\n");
+            return;
+        }
+
+        // Display import summary
+        System.out.println();
+        System.out.println("IMPORT SUMMARY");
+        System.out.println("_______________________________________________");
+        System.out.printf("Student ID: %s\n", importedReport.getStudentId());
+        System.out.printf("Student Name: %s\n", importedReport.getStudentName());
+        System.out.printf("Student Type: %s\n", importedReport.getStudentType());
+        System.out.printf("Grades to Import: %d\n", importedReport.getGrades().size());
+        System.out.printf("Average Grade: %.2f%%\n", importedReport.getOverallAverage());
+        System.out.println("_______________________________________________");
+        System.out.println();
+
+        System.out.print("Confirm import? (Y/N): ");
+        char confirm = ui.getScanner().next().charAt(0);
+        ui.getScanner().nextLine();
+
+        if (confirm == 'Y' || confirm == 'y') {
+            // Process imported report and add grades (delegates to helper method - SRP)
+            int importedCount = processImportedReport(importedReport);
+
+            System.out.println();
+            System.out.println("Import completed successfully!");
+            System.out.printf("Grades imported: %d\n", importedCount);
+            System.out.println();
+
+            // Invalidate caches (grades changed)
+            cacheManager.invalidateByType(CacheManager.CacheType.GRADE_REPORT);
+            cacheManager.invalidateByType(CacheManager.CacheType.STATISTICS);
+
+        } else if (confirm == 'N' || confirm == 'n') {
+            System.out.println("Import cancelled\n");
+        } else {
+            throw new InvalidMenuChoiceException(
+                "X ERROR: InvalidMenuChoiceException\n   Please enter Y or N.\n   You entered: " + confirm
+            );
+        }
+    }
+
+    /**
+     * Import from CSV format (SRP: separate CSV parsing logic)
+     */
+    private StudentReport importFromCSV(MultiFormatFileHandler fileHandler, java.nio.file.Path filePath) throws Exception {
+        java.util.List<String[]> csvData = fileHandler.importCSV(filePath);
+
+        if (csvData.isEmpty()) {
+            throw new Exception("CSV file is empty");
+        }
+
+        // Extract student ID from first record
+        String studentId = csvData.get(0)[0];
+        double totalGrade = 0.0;
+        int gradeCount = 0;
+
+        // Calculate average from all grades
+        for (String[] row : csvData) {
+            if (row.length >= 4) {
+                totalGrade += Double.parseDouble(row[3]);
+                gradeCount++;
+            }
+        }
+
+        double overallAverage = gradeCount > 0 ? totalGrade / gradeCount : 0.0;
+
+        // Create report (student info will be updated from studentManager)
+        StudentReport report = new StudentReport(
+            studentId, "Unknown", "Regular", overallAverage, "Imported"
+        );
+
+        // Add grades to report
+        int counter = 1;
+        for (String[] row : csvData) {
+            if (row.length >= 4) {
+                String gradeId = "GRD" + String.format("%03d", counter++);
+                String date = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+                String subjectName = row[1];
+                String subjectType = row[2];
+                double grade = Double.parseDouble(row[3]);
+
+                GradeData gradeData = new GradeData(gradeId, date, subjectName, subjectType, grade);
+                report.addGrade(gradeData);
+            }
+        }
+
+        return report;
+    }
+
+    /**
+     * Process imported report and add grades to system (SRP: separate import processing logic)
+     */
+    private int processImportedReport(StudentReport report) {
+        if (report == null) {
+            return 0;
+        }
+
+        int importedCount = 0;
+        String reportStudentId = report.getStudentId();
+
+        // Check if student exists and update report with actual student info
+        try {
+            Student reportStudent = studentManager.findStudent(reportStudentId);
+            if (reportStudent != null) {
+                report.setStudentName(reportStudent.getName());
+                report.setStudentType(reportStudent.getStudentType());
+            } else {
+                System.out.println("⚠ Warning: Student " + reportStudentId + " not found. Grades will be imported but student must exist.");
+            }
+        } catch (Exception e) {
+            System.out.println("⚠ Warning: Could not verify student " + reportStudentId);
+        }
+
+        // Import all grades from the report
+        for (GradeData gradeData : report.getGrades()) {
+            try {
+                // Verify student exists
+                try {
+                    studentManager.findStudent(reportStudentId);
+                } catch (Exception e) {
+                    System.out.println("⚠ Skipping grade for non-existent student: " + reportStudentId);
+                    continue;
+                }
+
+                // Create subject using factory (OCP)
+                Subject reportSubject;
+                if (gradeData.getSubjectType().equalsIgnoreCase("Core")) {
+                    reportSubject = new CoreSubject();
+                } else {
+                    reportSubject = new ElectiveSubject();
+                }
+                reportSubject.setSubjectName(gradeData.getSubjectName());
+
+                // Check if grade already exists
+                boolean gradeExists = false;
+                for (Grade existingGrade : gradeManager.getGrades()) {
+                    if (existingGrade.getStudentId().equals(reportStudentId) &&
+                        existingGrade.getSubject().getSubjectName().equals(gradeData.getSubjectName()) &&
+                        existingGrade.getGrade() == gradeData.getGrade()) {
+                        gradeExists = true;
+                        break;
+                    }
+                }
+
+                if (!gradeExists) {
+                    // Create and add grade
+                    Grade newGrade = new Grade(reportStudentId, reportSubject, (int) gradeData.getGrade());
+                    newGrade.recordGrade((int) gradeData.getGrade());
+                    newGrade.setGradeId();
+                    gradeManager.addGrade(newGrade);
+                    importedCount++;
+                } else {
+                    System.out.println("⚠ Skipping duplicate grade: " + gradeData.getGradeId());
+                }
+
+            } catch (Exception e) {
+                System.out.println("⚠ Error importing grade " + gradeData.getGradeId() + ": " + e.getMessage());
+            }
+        }
+
+        return importedCount;
     }
     
     private void handleBulkImport() throws Exception {
