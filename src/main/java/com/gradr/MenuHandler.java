@@ -1,6 +1,7 @@
 package com.gradr;
 
 import com.gradr.exceptions.InvalidMenuChoiceException;
+import java.util.List;
 
 /**
  * MenuHandler - Handles menu-driven application flow
@@ -397,8 +398,118 @@ public class MenuHandler {
     }
     
     private void handleExportReport() throws Exception {
-        System.out.println("EXPORT REPORT - See original Main.java for full implementation");
-        System.out.println("This is a simplified demonstration of SOLID architecture.\n");
+        System.out.println("EXPORT REPORT");
+        System.out.println("_______________________________________________");
+        System.out.println();
+
+        System.out.print("Enter Student ID: ");
+        String studentId = ui.getScanner().nextLine();
+        System.out.println();
+
+        // Find student (try cache first) - DIP: depends on abstraction
+        Student student = findStudentWithCache(studentId);
+        
+        // Display student information
+        System.out.println("Student Information:");
+        System.out.printf("ID: %s\n", student.getStudentId());
+        System.out.printf("Name: %s\n", student.getName());
+        System.out.printf("Type: %s Student\n", student.getStudentType());
+        System.out.println();
+
+        // Select export format (OCP: Strategy pattern allows extensibility)
+        System.out.println("Select Export Format:");
+        System.out.println("1. CSV (Comma-Separated Values)");
+        System.out.println("2. JSON (JavaScript Object Notation)");
+        System.out.println("3. Binary (.dat file)");
+        System.out.println();
+
+        System.out.print("Select format (1-3): ");
+        int formatChoice = ui.getScanner().nextInt();
+        ui.getScanner().nextLine();
+
+        if (formatChoice < 1 || formatChoice > 3) {
+            throw new InvalidMenuChoiceException(
+                "X ERROR: InvalidMenuChoiceException\n   Please select a valid option (1-3).\n   You entered: " + formatChoice
+            );
+        }
+
+        // Create export strategy based on choice (OCP: Strategy Pattern)
+        FileExportStrategy exportStrategy;
+        switch (formatChoice) {
+            case 1:
+                exportStrategy = new CSVExportStrategy();
+                break;
+            case 2:
+                exportStrategy = new JSONExportStrategy();
+                break;
+            case 3:
+                exportStrategy = new BinaryExportStrategy();
+                break;
+            default:
+                throw new InvalidMenuChoiceException("Invalid format choice");
+        }
+
+        // Build StudentReport from student data (SRP: data preparation)
+        StudentReport report = buildStudentReport(student);
+        
+        // Generate filename
+        String fileName = student.getStudentId() + "_" + student.getName().replace(" ", "_") + "_report";
+        
+        System.out.println();
+        System.out.print("Confirm export? (Y/N): ");
+        char confirm = ui.getScanner().next().charAt(0);
+        ui.getScanner().nextLine();
+        
+        if (confirm == 'Y' || confirm == 'y') {
+            // Delegate export to strategy (DIP: depends on abstraction)
+            java.nio.file.Path exportedFile = exportStrategy.export(report, fileName);
+            
+            System.out.println();
+            System.out.println("Export successful!");
+            System.out.printf("Format: %s\n", exportStrategy.getFormatName());
+            System.out.printf("File: %s\n", exportedFile.toString());
+            System.out.printf("Total Grades Exported: %d\n", report.getGrades().size());
+            System.out.println();
+        } else if (confirm == 'N' || confirm == 'n') {
+            System.out.println("Export cancelled\n");
+        } else {
+            throw new InvalidMenuChoiceException(
+                "X ERROR: InvalidMenuChoiceException\n   Please enter Y or N.\n   You entered: " + confirm
+            );
+        }
+    }
+    
+    /**
+     * Build StudentReport from Student data (SRP: separate report building logic)
+     */
+    private StudentReport buildStudentReport(Student student) {
+        // Create report with student details
+        StudentReport report = new StudentReport(
+            student.getStudentId(),
+            student.getName(),
+            student.getStudentType(),
+            student.calculateAverageGrade(),
+            "Detailed Grade Report"
+        );
+        
+        // Get all grades for the student (delegates to GradeRepository via GradeManager)
+        List<Grade> studentGrades = gradeManager.getGradeHistory();
+        
+        // Filter and add student's grades to report
+        for (Grade grade : studentGrades) {
+            if (grade.getStudentId().equals(student.getStudentId())) {
+                GradeData gradeData = new GradeData(
+                    grade.getGradeId(),
+                    grade.getDate(),
+                    grade.getSubject().getSubjectName(),
+                    grade.getSubject().getSubjectType(),
+                    grade.getGrade()
+                );
+                report.addGrade(gradeData);
+            }
+        }
+        
+        return report;
     }
     
     private void handleImportData() throws Exception {
