@@ -751,8 +751,246 @@ public class MenuHandler {
     }
     
     private void handleBulkImport() throws Exception {
-        System.out.println("BULK IMPORT - See original Main.java for full implementation");
-        System.out.println("This is a simplified demonstration of SOLID architecture.\n");
+        System.out.println("BULK IMPORT GRADES");
+        System.out.println("_______________________________________________");
+        System.out.println();
+
+        System.out.println("Place your CSV file in: ./imports/");
+        System.out.println();
+
+        System.out.println("CSV Format Required:");
+        System.out.println("StudentID,SubjectName,SubjectType,Grade");
+        System.out.println("Example: STU001,Mathematics,Core,85");
+        System.out.println();
+
+        System.out.print("Enter filename (without extension): ");
+        String fileName = ui.getScanner().nextLine();
+        System.out.println();
+
+        // Build file path
+        String csvFilePath = "./imports/" + fileName + ".csv";
+        java.nio.file.Path filePath = java.nio.file.Paths.get(csvFilePath);
+
+        // Validate file exists
+        if (!java.nio.file.Files.exists(filePath)) {
+            System.out.println("X ERROR: File not found: " + csvFilePath);
+            System.out.println();
+            return;
+        }
+
+        // Validate file is not empty
+        try {
+            if (java.nio.file.Files.size(filePath) == 0) {
+                throw new com.gradr.exceptions.InvalidFileFormatException(
+                    "X ERROR: InvalidFileFormatException\n   CSV file is empty: " + fileName + ".csv"
+                );
+            }
+        } catch (java.io.IOException e) {
+            System.out.println("X ERROR: IOException\n   Could not read file: " + e.getMessage());
+            System.out.println();
+            return;
+        }
+
+        System.out.println("Processing CSV file...");
+        System.out.println();
+
+        // Use CSVParser to parse the file (SRP: CSV parsing separated)
+        CSVParser parser = new CSVParser(csvFilePath);
+        java.util.ArrayList<String[]> gradeData;
+
+        try {
+            gradeData = parser.parseGradeCSV();
+        } catch (java.io.IOException e) {
+            System.out.println("X ERROR: IOException\n   Failed to read CSV file: " + e.getMessage());
+            System.out.println();
+            return;
+        } catch (com.gradr.exceptions.CSVParseException e) {
+            System.out.println("X ERROR: CSVParseException\n   " + e.getMessage());
+            System.out.println();
+            return;
+        }
+
+        if (gradeData.isEmpty()) {
+            System.out.println("X ERROR: No valid data found in CSV file");
+            System.out.println();
+            return;
+        }
+
+        // Display preview
+        System.out.println("IMPORT PREVIEW");
+        System.out.println("_______________________________________________");
+        System.out.printf("Total Records: %d\n", gradeData.size());
+        System.out.println();
+        
+        // Show first few records
+        int previewCount = Math.min(5, gradeData.size());
+        System.out.println("First " + previewCount + " records:");
+        for (int i = 0; i < previewCount; i++) {
+            String[] record = gradeData.get(i);
+            System.out.printf("  %s - %s (%s): %.1f%%\n", 
+                record[0], record[1], record[2], Double.parseDouble(record[3]));
+        }
+        if (gradeData.size() > 5) {
+            System.out.println("  ... and " + (gradeData.size() - 5) + " more");
+        }
+        System.out.println("_______________________________________________");
+        System.out.println();
+
+        System.out.print("Proceed with import? (Y/N): ");
+        char confirm = ui.getScanner().next().charAt(0);
+        ui.getScanner().nextLine();
+
+        if (confirm != 'Y' && confirm != 'y') {
+            System.out.println("Import cancelled\n");
+            return;
+        }
+
+        // Process bulk import (delegates to helper method - SRP)
+        BulkImportResult result = processBulkImport(gradeData);
+
+        // Display results
+        System.out.println();
+        System.out.println("BULK IMPORT COMPLETED");
+        System.out.println("_______________________________________________");
+        System.out.printf("Successfully imported: %d grades\n", result.successCount);
+        System.out.printf("Skipped (errors): %d grades\n", result.errorCount);
+        System.out.printf("Skipped (duplicates): %d grades\n", result.duplicateCount);
+        System.out.println("_______________________________________________");
+        System.out.println();
+
+        // Show error details if any
+        if (!result.errors.isEmpty() && result.errors.size() <= 10) {
+            System.out.println("Error Details:");
+            for (String error : result.errors) {
+                System.out.println("  " + error);
+            }
+            System.out.println();
+        } else if (result.errors.size() > 10) {
+            System.out.println("Showing first 10 errors:");
+            for (int i = 0; i < 10; i++) {
+                System.out.println("  " + result.errors.get(i));
+            }
+            System.out.println("  ... and " + (result.errors.size() - 10) + " more errors");
+            System.out.println();
+        }
+
+        // Invalidate caches if any grades were imported
+        if (result.successCount > 0) {
+            cacheManager.invalidateByType(CacheManager.CacheType.GRADE_REPORT);
+            cacheManager.invalidateByType(CacheManager.CacheType.STATISTICS);
+        }
+    }
+
+    /**
+     * Process bulk import from parsed CSV data (SRP: separate import processing logic)
+     */
+    private BulkImportResult processBulkImport(java.util.ArrayList<String[]> gradeData) {
+        BulkImportResult result = new BulkImportResult();
+
+        for (int i = 0; i < gradeData.size(); i++) {
+            String[] record = gradeData.get(i);
+            int rowNum = i + 2; // +2 because of 0-based index and header row
+
+            try {
+                // Validate record has correct format
+                if (record.length != 4) {
+                    result.addError("Row " + rowNum + ": Invalid format (expected 4 columns)");
+                    continue;
+                }
+
+                String studentId = record[0];
+                String subjectName = record[1];
+                String subjectType = record[2];
+                String gradeStr = record[3];
+
+                // Validate student exists
+                Student student;
+                try {
+                    student = studentManager.findStudent(studentId);
+                } catch (Exception e) {
+                    result.addError("Row " + rowNum + ": Student not found - " + studentId);
+                    continue;
+                }
+
+                // Validate subject type
+                if (!subjectType.equalsIgnoreCase("Core") && !subjectType.equalsIgnoreCase("Elective")) {
+                    result.addError("Row " + rowNum + ": Invalid subject type - " + subjectType);
+                    continue;
+                }
+
+                // Validate and parse grade
+                double gradeValue;
+                try {
+                    gradeValue = Double.parseDouble(gradeStr);
+                    if (gradeValue < 0 || gradeValue > 100) {
+                        result.addError("Row " + rowNum + ": Grade out of range (0-100) - " + gradeValue);
+                        continue;
+                    }
+                } catch (NumberFormatException e) {
+                    result.addError("Row " + rowNum + ": Invalid grade value - " + gradeStr);
+                    continue;
+                }
+
+                // Create subject using factory (OCP)
+                Subject subject;
+                if (subjectType.equalsIgnoreCase("Core")) {
+                    subject = new CoreSubject();
+                } else {
+                    subject = new ElectiveSubject();
+                }
+                subject.setSubjectName(subjectName);
+
+                // Check for duplicate grade
+                boolean isDuplicate = false;
+                for (Grade existingGrade : gradeManager.getGrades()) {
+                    if (existingGrade.getStudentId().equals(studentId) &&
+                        existingGrade.getSubject().getSubjectName().equalsIgnoreCase(subjectName) &&
+                        existingGrade.getGrade() == gradeValue) {
+                        isDuplicate = true;
+                        break;
+                    }
+                }
+
+                if (isDuplicate) {
+                    result.duplicateCount++;
+                    continue;
+                }
+
+                // Create and add grade
+                Grade grade = new Grade(studentId, subject, (int) gradeValue);
+                if (grade.recordGrade((int) gradeValue)) {
+                    grade.setGradeId();
+                    gradeManager.addGrade(grade);
+                    
+                    // Update GPA for the student
+                    GPACalculator gpaCalc = new GPACalculator(gradeManager);
+                    double gpa = gpaCalc.calculateCumulativeGPA(studentId);
+                    gradeManager.updateGPARanking(student, gpa);
+                    
+                    result.successCount++;
+                }
+
+            } catch (Exception e) {
+                result.addError("Row " + rowNum + ": Unexpected error - " + e.getMessage());
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Inner class to track bulk import results
+     */
+    private static class BulkImportResult {
+        int successCount = 0;
+        int errorCount = 0;
+        int duplicateCount = 0;
+        java.util.List<String> errors = new java.util.ArrayList<>();
+
+        void addError(String error) {
+            errors.add(error);
+            errorCount++;
+        }
     }
     
     private void handleCalculateGPA() throws Exception {
