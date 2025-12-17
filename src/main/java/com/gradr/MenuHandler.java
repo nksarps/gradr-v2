@@ -994,8 +994,32 @@ public class MenuHandler {
     }
     
     private void handleCalculateGPA() throws Exception {
-        System.out.println("CALCULATE GPA - See original Main.java for full implementation");
-        System.out.println("This is a simplified demonstration of SOLID architecture.\n");
+        System.out.println("CALCULATE STUDENT GPA");
+        System.out.println("_______________________________________________");
+        System.out.println();
+
+        System.out.print("Enter Student ID: ");
+        String studentId = ui.getScanner().nextLine();
+        System.out.println();
+
+        // Find student (try cache first) - DIP: depends on abstraction
+        Student student = findStudentWithCache(studentId);
+
+        // Check if student has any grades
+        if (student.getEnrolledSubjectsCount() == 0) {
+            System.out.println("No grades recorded for this student yet.");
+            System.out.println("GPA calculation unavailable.");
+            System.out.println();
+            return;
+        }
+
+        // Create GPA calculator and generate report (delegates to GPACalculator - SRP)
+        GPACalculator gpaCalculator = new GPACalculator(gradeManager);
+        String gpaReport = gpaCalculator.generateGPAReport(studentId, student, studentManager);
+        
+        // Display the report
+        System.out.println(gpaReport);
+        System.out.println();
     }
     
     private void handleClassStatistics() {
