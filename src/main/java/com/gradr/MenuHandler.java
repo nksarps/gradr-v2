@@ -1,8 +1,11 @@
 package com.gradr;
 
 import com.gradr.exceptions.InvalidMenuChoiceException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.InputMismatchException;
 import java.util.List;
+import java.util.Map;
 
 /**
  * MenuHandler - Handles menu-driven application flow
@@ -1891,8 +1894,323 @@ public class MenuHandler {
     }
     
     private void handleQueryGradeHistory() {
-        System.out.println("QUERY GRADE HISTORY - See original Main.java for full implementation");
-        System.out.println("This is a simplified demonstration of SOLID architecture.\n");
+        try {
+            System.out.println("QUERY GRADE HISTORY");
+            System.out.println("_______________________________________________");
+            System.out.println();
+            
+            if (gradeManager.getGradeCount() == 0) {
+                System.out.println("No grades recorded yet. History unavailable.");
+                System.out.println();
+                return;
+            }
+            
+            System.out.println("Query Options:");
+            System.out.println("1. Filter by Student ID");
+            System.out.println("2. Filter by Subject Name");
+            System.out.println("3. Filter by Subject Type (Core/Elective)");
+            System.out.println("4. Filter by Grade Range");
+            System.out.println("5. Filter by Date Range");
+            System.out.println("6. View All Grades");
+            System.out.println("7. Return to Main Menu");
+            System.out.println();
+            
+            System.out.print("Select option (1-7): ");
+            int queryOption;
+            try {
+                queryOption = ui.getScanner().nextInt();
+                ui.getScanner().nextLine();
+            } catch (InputMismatchException e) {
+                ui.getScanner().nextLine();
+                throw new InvalidMenuChoiceException("Please enter a valid number (1-7).");
+            }
+            
+            System.out.println();
+            
+            if (queryOption == 7) {
+                return; // Return to main menu
+            }
+            
+            if (queryOption < 1 || queryOption > 7) {
+                throw new InvalidMenuChoiceException("Invalid option. Please select 1-7.");
+            }
+            
+            List<Grade> queryResults = new ArrayList<>();
+            
+            switch (queryOption) {
+                case 1:
+                    // Filter by Student ID
+                    System.out.print("Enter Student ID: ");
+                    String studentId = ui.getScanner().nextLine().trim();
+                    System.out.println();
+                    queryResults = queryGradesByStudentId(studentId);
+                    break;
+                    
+                case 2:
+                    // Filter by Subject Name
+                    System.out.println("Common Subjects:");
+                    System.out.println("Core: Mathematics, English, Science");
+                    System.out.println("Elective: Music, Art, Physical Education");
+                    System.out.println();
+                    System.out.print("Enter subject name (or leave empty for all): ");
+                    String subjectName = ui.getScanner().nextLine().trim();
+                    System.out.println();
+                    queryResults = queryGradesBySubjectName(subjectName);
+                    break;
+                    
+                case 3:
+                    // Filter by Subject Type
+                    System.out.println("Subject Types:");
+                    System.out.println("1. Core Subjects");
+                    System.out.println("2. Elective Subjects");
+                    System.out.println("3. Both");
+                    System.out.println();
+                    System.out.print("Select type (1-3): ");
+                    int typeChoice;
+                    try {
+                        typeChoice = ui.getScanner().nextInt();
+                        ui.getScanner().nextLine();
+                    } catch (InputMismatchException e) {
+                        ui.getScanner().nextLine();
+                        throw new InvalidMenuChoiceException("Please enter a valid number (1-3).");
+                    }
+                    
+                    System.out.println();
+                    String subjectType;
+                    switch (typeChoice) {
+                        case 1: subjectType = "Core"; break;
+                        case 2: subjectType = "Elective"; break;
+                        case 3: subjectType = ""; break; // Empty for both
+                        default: throw new InvalidMenuChoiceException("Invalid choice. Please select 1-3.");
+                    }
+                    queryResults = queryGradesBySubjectType(subjectType);
+                    break;
+                    
+                case 4:
+                    // Filter by Grade Range
+                    System.out.print("Enter minimum grade (0-100): ");
+                    String minGradeStr = ui.getScanner().nextLine().trim();
+                    System.out.print("Enter maximum grade (0-100): ");
+                    String maxGradeStr = ui.getScanner().nextLine().trim();
+                    System.out.println();
+                    
+                    double minGrade, maxGrade;
+                    try {
+                        minGrade = Double.parseDouble(minGradeStr);
+                        maxGrade = Double.parseDouble(maxGradeStr);
+                        if (minGrade < 0 || minGrade > 100 || maxGrade < 0 || maxGrade > 100) {
+                            throw new NumberFormatException("Grades must be between 0 and 100");
+                        }
+                        if (minGrade > maxGrade) {
+                            throw new NumberFormatException("Minimum grade cannot be greater than maximum grade");
+                        }
+                    } catch (NumberFormatException e) {
+                        throw new NumberFormatException("Invalid grade range: " + e.getMessage());
+                    }
+                    
+                    queryResults = queryGradesByRange(minGrade, maxGrade);
+                    break;
+                    
+                case 5:
+                    // Filter by Date Range
+                    System.out.println("Date format: YYYY-MM-DD (e.g., 2024-01-15)");
+                    System.out.print("Enter start date (or leave empty for all): ");
+                    String startDate = ui.getScanner().nextLine().trim();
+                    System.out.print("Enter end date (or leave empty for all): ");
+                    String endDate = ui.getScanner().nextLine().trim();
+                    System.out.println();
+                    
+                    queryResults = queryGradesByDateRange(startDate, endDate);
+                    break;
+                    
+                case 6:
+                    // View All Grades
+                    queryResults = new ArrayList<>(gradeManager.getGradeHistory());
+                    break;
+            }
+            
+            // Display results
+            displayQueryResults(queryResults);
+            
+        } catch (NumberFormatException e) {
+            System.out.println();
+            System.out.println("X ERROR: NumberFormatException\n   " + e.getMessage());
+            System.out.println();
+        } catch (InvalidMenuChoiceException e) {
+            System.out.println();
+            System.out.println(e.getMessage());
+            System.out.println();
+        } catch (Exception e) {
+            System.out.println();
+            System.out.println("X ERROR: " + e.getClass().getSimpleName() + "\n   " + e.getMessage());
+            System.out.println();
+        }
+    }
+    
+    /**
+     * Query grades by Student ID
+     */
+    private List<Grade> queryGradesByStudentId(String studentId) {
+        List<Grade> results = new ArrayList<>();
+        for (Grade grade : gradeManager.getGradeHistory()) {
+            if (grade.getStudentId().equalsIgnoreCase(studentId)) {
+                results.add(grade);
+            }
+        }
+        return results;
+    }
+    
+    /**
+     * Query grades by Subject Name
+     */
+    private List<Grade> queryGradesBySubjectName(String subjectName) {
+        List<Grade> results = new ArrayList<>();
+        List<Grade> allGrades = gradeManager.getGradeHistory();
+        
+        if (subjectName.isEmpty()) {
+            return new ArrayList<>(allGrades);
+        }
+        
+        for (Grade grade : allGrades) {
+            if (grade != null && grade.getSubject() != null && 
+                grade.getSubject().getSubjectName() != null &&
+                grade.getSubject().getSubjectName().equalsIgnoreCase(subjectName)) {
+                results.add(grade);
+            }
+        }
+        return results;
+    }
+    
+    /**
+     * Query grades by Subject Type
+     */
+    private List<Grade> queryGradesBySubjectType(String subjectType) {
+        List<Grade> results = new ArrayList<>();
+        List<Grade> allGrades = gradeManager.getGradeHistory();
+        
+        if (subjectType.isEmpty()) {
+            // Return all grades (for "Both" option)
+            return new ArrayList<>(allGrades);
+        }
+        
+        for (Grade grade : allGrades) {
+            if (grade != null && grade.getSubject() != null && 
+                grade.getSubject().getSubjectType() != null &&
+                grade.getSubject().getSubjectType().equalsIgnoreCase(subjectType)) {
+                results.add(grade);
+            }
+        }
+        return results;
+    }
+    
+    /**
+     * Query grades by Grade Range
+     */
+    private List<Grade> queryGradesByRange(double minGrade, double maxGrade) {
+        List<Grade> results = new ArrayList<>();
+        List<Grade> allGrades = gradeManager.getGradeHistory();
+        
+        for (Grade grade : allGrades) {
+            if (grade != null && grade.getGrade() >= minGrade && grade.getGrade() <= maxGrade) {
+                results.add(grade);
+            }
+        }
+        return results;
+    }
+    
+    /**
+     * Query grades by Date Range
+     */
+    private List<Grade> queryGradesByDateRange(String startDate, String endDate) {
+        List<Grade> results = new ArrayList<>();
+        List<Grade> allGrades = gradeManager.getGradeHistory();
+        
+        for (Grade grade : allGrades) {
+            if (grade == null || grade.getDate() == null) {
+                continue;
+            }
+            
+            String gradeDate = grade.getDate();
+            boolean matches = true;
+            
+            if (!startDate.isEmpty() && gradeDate.compareTo(startDate) < 0) {
+                matches = false;
+            }
+            if (!endDate.isEmpty() && gradeDate.compareTo(endDate) > 0) {
+                matches = false;
+            }
+            
+            if (matches) {
+                results.add(grade);
+            }
+        }
+        return results;
+    }
+    
+    /**
+     * Display query results with statistics
+     */
+    private void displayQueryResults(List<Grade> results) {
+        System.out.println("QUERY RESULTS");
+        System.out.println("_______________________________________________");
+        System.out.println();
+        
+        System.out.printf("%-9s | %-12s | %-20s | %-10s | %-16s | %-10s | %-6s%n", 
+            "GRD ID", "STUDENT ID", "STUDENT NAME", "SUBJECT", "SUBJECT TYPE", "DATE", "GRADE");
+        System.out.println("_______________________________________________");
+        
+        double totalGrade = 0.0;
+        Map<String, Integer> subjectCount = new HashMap<>();
+        Map<String, Integer> studentCount = new HashMap<>();
+        
+        for (Grade grade : results) {
+            String studentName = "Unknown";
+            try {
+                Student student = studentManager.findStudent(grade.getStudentId());
+                studentName = student.getName();
+            } catch (Exception e) {
+                // Student not found, use "Unknown"
+            }
+            
+            System.out.printf("%-9s | %-12s | %-20s | %-10s | %-16s | %-10s | %-6.1f%%%n",
+                grade.getGradeId(),
+                grade.getStudentId(),
+                studentName.length() > 20 ? studentName.substring(0, 17) + "..." : studentName,
+                grade.getSubject().getSubjectName().length() > 10 ? 
+                    grade.getSubject().getSubjectName().substring(0, 7) + "..." : grade.getSubject().getSubjectName(),
+                grade.getSubject().getSubjectType(),
+                grade.getDate(),
+                grade.getGrade());
+            
+            totalGrade += grade.getGrade();
+            subjectCount.put(grade.getSubject().getSubjectName(), 
+                subjectCount.getOrDefault(grade.getSubject().getSubjectName(), 0) + 1);
+            studentCount.put(grade.getStudentId(), 
+                studentCount.getOrDefault(grade.getStudentId(), 0) + 1);
+        }
+        
+        System.out.println("_______________________________________________");
+        System.out.println();
+        
+        // Statistics
+        System.out.println("Statistics:");
+        System.out.println("  Total Grades: " + results.size());
+        if (results.size() > 0) {
+            System.out.printf("  Average Grade: %.2f%%%n", totalGrade / results.size());
+            System.out.println("  Unique Students: " + studentCount.size());
+            System.out.println("  Unique Subjects: " + subjectCount.size());
+            
+            // Top subjects
+            if (!subjectCount.isEmpty()) {
+                System.out.println();
+                System.out.println("  Top Subjects:");
+                subjectCount.entrySet().stream()
+                    .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+                    .limit(5)
+                    .forEach(entry -> System.out.printf("    - %s: %d grades%n", entry.getKey(), entry.getValue()));
+            }
+        }
+        System.out.println();
     }
     
     private void handleScheduleTasks() {
