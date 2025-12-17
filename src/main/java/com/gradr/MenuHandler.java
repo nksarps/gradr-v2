@@ -1441,8 +1441,269 @@ public class MenuHandler {
     }
     
     private void handleAdvancedSearch() {
-        System.out.println("ADVANCED SEARCH - See original Main.java for full implementation");
-        System.out.println("This is a simplified demonstration of SOLID architecture.\n");
+        System.out.println("SEARCH STUDENTS (Advanced) [ENHANCED]");
+        System.out.println("_______________________________________________");
+        System.out.println();
+
+        System.out.println("Search options:");
+        System.out.println("1. By Student ID");
+        System.out.println("2. By name (partial match)");
+        System.out.println("3. By Grade Range");
+        System.out.println("4. By Student Type");
+        System.out.println();
+
+        try {
+            System.out.print("Select option (1-4): ");
+            int searchOption = ui.getScanner().nextInt();
+            ui.getScanner().nextLine();
+            
+            if (searchOption < 1 || searchOption > 4) {
+                throw new InvalidMenuChoiceException(
+                    "X ERROR: InvalidMenuChoiceException\n   Please select a valid option (1-4).\n   You entered: " + searchOption
+                );
+            }
+
+            System.out.println();
+
+            switch (searchOption) {
+                case 1: // By Student ID
+                    searchByStudentId();
+                    break;
+                    
+                case 2: // By name (partial match)
+                    searchByName();
+                    break;
+                    
+                case 3: // By Grade Range
+                    searchByGradeRange();
+                    break;
+                    
+                case 4: // By Student Type
+                    searchByStudentType();
+                    break;
+            }
+            
+        } catch (InvalidMenuChoiceException e) {
+            System.out.println();
+            System.out.println(e.getMessage());
+            System.out.println();
+        } catch (Exception e) {
+            System.out.println();
+            System.out.println("X ERROR: " + e.getClass().getSimpleName() + "\n   " + e.getMessage());
+            System.out.println();
+        }
+    }
+    
+    /**
+     * Search for student by ID (SRP: separate search logic)
+     */
+    private void searchByStudentId() throws Exception {
+        System.out.print("Enter Student ID: ");
+        String searchId = ui.getScanner().nextLine();
+        System.out.println();
+        
+        // Find student (try cache first) - DIP: depends on abstraction
+        Student foundStudent = findStudentWithCache(searchId);
+        
+        // Display result
+        System.out.println("SEARCH RESULTS (1 found)");
+        System.out.println("_______________________________________________");
+        System.out.println();
+        System.out.printf("Student ID: %s\n", foundStudent.getStudentId());
+        System.out.printf("Name: %s\n", foundStudent.getName());
+        System.out.printf("Type: %s Student\n", foundStudent.getStudentType());
+        System.out.printf("Age: %d\n", foundStudent.getAge());
+        System.out.printf("Email: %s\n", foundStudent.getEmail());
+        System.out.printf("Phone: %s\n", foundStudent.getPhone());
+        System.out.printf("Average Grade: %.2f%%\n", foundStudent.calculateAverageGrade());
+        System.out.printf("Total Grades: %d\n", foundStudent.getEnrolledSubjectsCount());
+        System.out.printf("Status: %s\n", foundStudent.getStatus());
+        System.out.println();
+    }
+    
+    /**
+     * Search for students by name (partial match) (SRP: separate search logic)
+     */
+    private void searchByName() {
+        System.out.print("Enter name (partial match): ");
+        String searchName = ui.getScanner().nextLine().toLowerCase();
+        System.out.println();
+        
+        // Search through all students
+        java.util.List<Student> matchedStudents = new java.util.ArrayList<>();
+        for (Student student : studentManager.getStudentsList()) {
+            if (student.getName().toLowerCase().contains(searchName)) {
+                matchedStudents.add(student);
+            }
+        }
+        
+        // Display results
+        System.out.println("SEARCH RESULTS (" + matchedStudents.size() + " found)");
+        System.out.println("_______________________________________________");
+        System.out.println();
+        
+        if (matchedStudents.isEmpty()) {
+            System.out.println("No students found matching: " + searchName);
+        } else {
+            System.out.println("STU ID   | NAME                    | TYPE        | AVG GRADE | TOTAL GRADES");
+            System.out.println("------------------------------------------------------------------------------");
+            
+            for (Student student : matchedStudents) {
+                System.out.printf("%-8s | %-23s | %-11s | %-9.2f | %-12d\n",
+                    student.getStudentId(),
+                    student.getName().length() > 23 ? student.getName().substring(0, 20) + "..." : student.getName(),
+                    student.getStudentType(),
+                    student.calculateAverageGrade(),
+                    student.getEnrolledSubjectsCount());
+            }
+        }
+        System.out.println();
+    }
+    
+    /**
+     * Search for students by grade range (SRP: separate search logic)
+     */
+    private void searchByGradeRange() {
+        System.out.print("Enter minimum average grade (0-100): ");
+        double minGrade = ui.getScanner().nextDouble();
+        System.out.print("Enter maximum average grade (0-100): ");
+        double maxGrade = ui.getScanner().nextDouble();
+        ui.getScanner().nextLine();
+        System.out.println();
+        
+        // Validate range
+        if (minGrade < 0 || maxGrade > 100 || minGrade > maxGrade) {
+            System.out.println("Invalid grade range. Please enter values between 0-100 with min <= max.");
+            System.out.println();
+            return;
+        }
+        
+        // Search through all students
+        java.util.List<Student> matchedStudents = new java.util.ArrayList<>();
+        for (Student student : studentManager.getStudentsList()) {
+            double avg = student.calculateAverageGrade();
+            if (avg >= minGrade && avg <= maxGrade) {
+                matchedStudents.add(student);
+            }
+        }
+        
+        // Display results
+        System.out.println("SEARCH RESULTS (" + matchedStudents.size() + " found)");
+        System.out.println("Grade Range: " + minGrade + "% - " + maxGrade + "%");
+        System.out.println("_______________________________________________");
+        System.out.println();
+        
+        if (matchedStudents.isEmpty()) {
+            System.out.println("No students found in grade range: " + minGrade + "% - " + maxGrade + "%");
+        } else {
+            System.out.println("STU ID   | NAME                    | TYPE        | AVG GRADE | STATUS");
+            System.out.println("--------------------------------------------------------------------------");
+            
+            // Sort by average grade (descending)
+            matchedStudents.sort((s1, s2) -> Double.compare(s2.calculateAverageGrade(), s1.calculateAverageGrade()));
+            
+            for (Student student : matchedStudents) {
+                System.out.printf("%-8s | %-23s | %-11s | %-9.2f | %-10s\n",
+                    student.getStudentId(),
+                    student.getName().length() > 23 ? student.getName().substring(0, 20) + "..." : student.getName(),
+                    student.getStudentType(),
+                    student.calculateAverageGrade(),
+                    student.getStatus());
+            }
+            
+            // Display statistics
+            System.out.println("--------------------------------------------------------------------------");
+            double totalAvg = matchedStudents.stream()
+                .mapToDouble(Student::calculateAverageGrade)
+                .average()
+                .orElse(0.0);
+            System.out.printf("Average Grade (filtered): %.2f%%\n", totalAvg);
+        }
+        System.out.println();
+    }
+    
+    /**
+     * Search for students by type (SRP: separate search logic)
+     */
+    private void searchByStudentType() {
+        System.out.println("Student Type:");
+        System.out.println("1. Regular Students");
+        System.out.println("2. Honors Students");
+        System.out.println("3. Both");
+        System.out.println();
+        
+        System.out.print("Select type (1-3): ");
+        int typeChoice = ui.getScanner().nextInt();
+        ui.getScanner().nextLine();
+        System.out.println();
+        
+        if (typeChoice < 1 || typeChoice > 3) {
+            System.out.println("Invalid choice. Please select 1-3.");
+            System.out.println();
+            return;
+        }
+        
+        // Search through all students
+        java.util.List<Student> matchedStudents = new java.util.ArrayList<>();
+        String searchType = "";
+        
+        for (Student student : studentManager.getStudentsList()) {
+            if (typeChoice == 1 && student.getStudentType().equals("Regular")) {
+                matchedStudents.add(student);
+                searchType = "Regular";
+            } else if (typeChoice == 2 && student.getStudentType().equals("Honors")) {
+                matchedStudents.add(student);
+                searchType = "Honors";
+            } else if (typeChoice == 3) {
+                matchedStudents.add(student);
+                searchType = "All";
+            }
+        }
+        
+        // Display results
+        System.out.println("SEARCH RESULTS (" + matchedStudents.size() + " found)");
+        if (!searchType.equals("All")) {
+            System.out.println("Type: " + searchType + " Students");
+        }
+        System.out.println("_______________________________________________");
+        System.out.println();
+        
+        if (matchedStudents.isEmpty()) {
+            System.out.println("No " + searchType.toLowerCase() + " students found.");
+        } else {
+            System.out.println("STU ID   | NAME                    | TYPE        | AVG GRADE | PASSING GRADE | STATUS");
+            System.out.println("--------------------------------------------------------------------------------------");
+            
+            for (Student student : matchedStudents) {
+                System.out.printf("%-8s | %-23s | %-11s | %-9.2f | %-13d%% | %-10s\n",
+                    student.getStudentId(),
+                    student.getName().length() > 23 ? student.getName().substring(0, 20) + "..." : student.getName(),
+                    student.getStudentType(),
+                    student.calculateAverageGrade(),
+                    (int) student.getPassingGrade(),
+                    student.getStatus());
+            }
+            
+            // Display statistics by type
+            System.out.println("--------------------------------------------------------------------------------------");
+            if (typeChoice == 3) {
+                // Show breakdown by type
+                long regularCount = matchedStudents.stream()
+                    .filter(s -> s.getStudentType().equals("Regular"))
+                    .count();
+                long honorsCount = matchedStudents.stream()
+                    .filter(s -> s.getStudentType().equals("Honors"))
+                    .count();
+                System.out.printf("Regular Students: %d, Honors Students: %d\n", regularCount, honorsCount);
+            }
+            
+            double avgGrade = matchedStudents.stream()
+                .mapToDouble(Student::calculateAverageGrade)
+                .average()
+                .orElse(0.0);
+            System.out.printf("Average Grade: %.2f%%\n", avgGrade);
+        }
+        System.out.println();
     }
     
     private void handlePatternSearch() {
