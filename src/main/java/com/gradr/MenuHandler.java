@@ -163,7 +163,24 @@ public class MenuHandler {
         // Cache the new student
         cacheManager.put("student:" + student.getStudentId(), student, CacheManager.CacheType.STUDENT);
         
-        ui.displaySuccess("Student added successfully! ID: " + student.getStudentId());
+        // Display complete student details
+        System.out.println("Student added successfully!");
+        System.out.println("All inputs validated with regex patterns");
+        System.out.println();
+        System.out.printf("Student ID: %s\n", student.getStudentId());
+        System.out.printf("Name: %s\n", student.getName());
+        System.out.printf("Type: %s\n", student.getStudentType());
+        System.out.printf("Age: %d\n", student.getAge());
+        System.out.printf("Email: %s\n", student.getEmail());
+        System.out.printf("Passing Grade: %d%%\n", (int) student.getPassingGrade());
+        
+        if (student.getStudentType().equals("Honors")) {
+            HonorsStudent honorsStudent = (HonorsStudent) student;
+            String isEligible = honorsStudent.checkHonorsEligibility();
+            System.out.printf("Honors Eligible: %s\n", isEligible);
+        }
+        System.out.printf("Status: %s\n", student.getStatus());
+        System.out.println();
     }
     
     private void handleViewStudents() {
