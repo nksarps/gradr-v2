@@ -1023,13 +1023,138 @@ public class MenuHandler {
     }
     
     private void handleClassStatistics() {
-        System.out.println("CLASS STATISTICS - See original Main.java for full implementation");
-        System.out.println("This is a simplified demonstration of SOLID architecture.\n");
+        System.out.println("VIEW CLASS STATISTICS");
+        System.out.println("_______________________________________________");
+        System.out.println();
+
+        // Check if there are any grades recorded
+        if (gradeManager.getGradeCount() == 0) {
+            System.out.println("No grades recorded yet. Statistics unavailable.");
+            System.out.println();
+            return;
+        }
+
+        try {
+            // Try to get cached statistics first
+            String statsCacheKey = "statistics:class";
+            String statsReport = (String) cacheManager.get(statsCacheKey);
+            
+            if (statsReport == null) {
+                // Cache miss - calculate statistics
+                StatisticsCalculator classStats = new StatisticsCalculator(gradeManager, studentManager);
+                statsReport = classStats.generateClassStatistics();
+                // Cache the statistics report
+                cacheManager.put(statsCacheKey, statsReport, CacheManager.CacheType.STATISTICS);
+            }
+            
+            System.out.println(statsReport);
+        } catch (Exception e) {
+            System.out.println();
+            System.out.println("X ERROR: " + e.getClass().getSimpleName() + "\n   " + e.getMessage());
+            System.out.println();
+        }
     }
     
     private void handleStatisticsDashboard() {
-        System.out.println("STATISTICS DASHBOARD - See original Main.java for full implementation");
-        System.out.println("This is a simplified demonstration of SOLID architecture.\n");
+        try {
+            System.out.println("REAL-TIME STATISTICS DASHBOARD");
+            System.out.println("_______________________________________________");
+            System.out.println();
+            System.out.println("Starting background daemon thread...");
+            
+            // Create dashboard instance
+            StatisticsDashboard newDashboard = new StatisticsDashboard(studentManager, gradeManager);
+            dashboard = newDashboard; // Store reference for menu display
+            
+            // Register thread pool with performance monitor if available
+            SystemPerformanceMonitor performanceMonitor = context.getPerformanceMonitor();
+            if (performanceMonitor != null) {
+                performanceMonitor.registerThreadPool("StatisticsDashboard", 
+                    newDashboard.getExecutorService(), newDashboard.getMaxThreadCount());
+            }
+            
+            // Start the dashboard (this will perform initial calculation)
+            newDashboard.start();
+            
+            System.out.println("✓ Background daemon thread started");
+            System.out.println("✓ Auto-refresh enabled (every 5 seconds)");
+            System.out.println();
+            System.out.println("Waiting for initial statistics calculation...");
+            
+            // Wait for initial calculation to complete
+            int waitCount = 0;
+            while (newDashboard.isCalculating() && waitCount < 20) {
+                Thread.sleep(250);
+                waitCount++;
+            }
+            
+            System.out.println();
+            
+            // Display initial dashboard
+            newDashboard.displayDashboard();
+            
+            // Auto-refresh approach: background thread handles display automatically
+            // Main thread handles user input in a loop
+            final boolean[] shouldQuit = {false};
+            
+            // Create input reader thread
+            Thread inputThread = new Thread(() -> {
+                try {
+                    System.out.println();
+                    System.out.println("Dashboard Commands:");
+                    System.out.println("  'r' - Refresh now");
+                    System.out.println("  'q' - Quit dashboard");
+                    System.out.println();
+                    System.out.println("Press Enter to continue...");
+                    
+                    while (!shouldQuit[0] && newDashboard.isRunning()) {
+                        if (System.in.available() > 0) {
+                            String input = ui.getScanner().nextLine().trim().toLowerCase();
+                            
+                            if (input.equals("q")) {
+                                shouldQuit[0] = true;
+                                break;
+                            } else if (input.equals("r")) {
+                                System.out.println("\nRefreshing dashboard...");
+                                newDashboard.displayDashboard();
+                                System.out.println("\nPress 'r' to refresh, 'q' to quit");
+                            } else if (!input.isEmpty()) {
+                                System.out.println("\nInvalid command. Press 'r' to refresh, 'q' to quit");
+                            }
+                        }
+                        Thread.sleep(100);
+                    }
+                } catch (Exception e) {
+                    shouldQuit[0] = true;
+                }
+            });
+            
+            inputThread.setName("DashboardInputThread");
+            inputThread.setDaemon(true);
+            inputThread.start();
+            
+            // Wait for quit signal
+            while (!shouldQuit[0] && newDashboard.isRunning()) {
+                Thread.sleep(500);
+            }
+            
+            // Cleanup
+            newDashboard.stop();
+            inputThread.interrupt();
+            
+            System.out.println();
+            System.out.println("✓ Dashboard closed successfully");
+            System.out.println("✓ Background thread terminated");
+            System.out.println();
+            
+        } catch (Exception e) {
+            System.out.println();
+            System.out.println("X ERROR: " + e.getClass().getSimpleName() + "\n   " + e.getMessage());
+            if (dashboard != null) {
+                dashboard.stop();
+            }
+            System.out.println();
+        }
     }
     
     private void handleBatchReports() {
