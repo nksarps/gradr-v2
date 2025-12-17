@@ -5,10 +5,13 @@ import com.gradr.exceptions.CSVParseException;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 
 public class CSVParser {
     private String filePath;
+    private SystemPerformanceMonitor performanceMonitor;
 
     /**
      * Constructor for CSVParser
@@ -19,16 +22,35 @@ public class CSVParser {
     }
 
     /**
+     * Constructor for CSVParser with performance monitoring
+     * @param filePath Path to the CSV file
+     * @param performanceMonitor SystemPerformanceMonitor for tracking I/O operations
+     */
+    public CSVParser(String filePath, SystemPerformanceMonitor performanceMonitor) {
+        this.filePath = filePath;
+        this.performanceMonitor = performanceMonitor;
+    }
+
+    /**
      * Parses the CSV file and returns an array of grade data
      * Expected CSV format: StudentID,SubjectName,SubjectType,Grade
      * @return ArrayList of String arrays containing grade data
      * @throws IOException if file cannot be read
      */
     public ArrayList<String[]> parseGradeCSV() throws IOException, CSVParseException {
+        long startTime = System.currentTimeMillis();
         ArrayList<String[]> gradeData = new ArrayList<>();
         BufferedReader reader = null;
+        long fileSize = 0;
 
         try {
+            // Get file size for performance tracking
+            try {
+                fileSize = Files.size(Paths.get(filePath));
+            } catch (IOException e) {
+                fileSize = 0;
+            }
+
             reader = new BufferedReader(new FileReader(filePath));
             String line;
             boolean isFirstLine = true;
@@ -63,6 +85,13 @@ public class CSVParser {
         } finally {
             if (reader != null) {
                 reader.close();
+            }
+
+            // Record I/O operation for performance monitoring
+            if (performanceMonitor != null) {
+                long duration = System.currentTimeMillis() - startTime;
+                String filename = Paths.get(filePath).getFileName().toString();
+                performanceMonitor.recordIOOperation("CSV Read", filename, duration, fileSize, true);
             }
         }
 

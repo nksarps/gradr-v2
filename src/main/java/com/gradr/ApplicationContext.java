@@ -86,10 +86,10 @@ public class ApplicationContext {
             studentManager, gradeManager, cacheManager, patternSearchService
         );
         
-        // Create export strategies
-        this.csvExportStrategy = new CSVExportStrategy();
-        this.jsonExportStrategy = new JSONExportStrategy();
-        this.binaryExportStrategy = new BinaryExportStrategy();
+        // Create export strategies with performance monitoring
+        this.csvExportStrategy = new CSVExportStrategy(performanceMonitor);
+        this.jsonExportStrategy = new JSONExportStrategy(performanceMonitor);
+        this.binaryExportStrategy = new BinaryExportStrategy(performanceMonitor);
         
         // Warm cache on startup
         cacheManager.warmCache(studentManager, gradeManager);

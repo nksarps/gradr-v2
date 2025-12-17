@@ -436,16 +436,21 @@ public class MenuHandler {
         }
 
         // Create export strategy based on choice (OCP: Strategy Pattern)
+        // Pass performance monitor for I/O tracking
+        SystemPerformanceMonitor perfMonitor = context.getPerformanceMonitor();
         FileExportStrategy exportStrategy;
         switch (formatChoice) {
             case 1:
-                exportStrategy = new CSVExportStrategy();
+                exportStrategy = perfMonitor != null ? 
+                    new CSVExportStrategy(perfMonitor) : new CSVExportStrategy();
                 break;
             case 2:
-                exportStrategy = new JSONExportStrategy();
+                exportStrategy = perfMonitor != null ? 
+                    new JSONExportStrategy(perfMonitor) : new JSONExportStrategy();
                 break;
             case 3:
-                exportStrategy = new BinaryExportStrategy();
+                exportStrategy = perfMonitor != null ? 
+                    new BinaryExportStrategy(perfMonitor) : new BinaryExportStrategy();
                 break;
             default:
                 throw new InvalidMenuChoiceException("Invalid format choice");
@@ -797,7 +802,10 @@ public class MenuHandler {
         System.out.println();
 
         // Use CSVParser to parse the file (SRP: CSV parsing separated)
-        CSVParser parser = new CSVParser(csvFilePath);
+        // Pass performance monitor for I/O tracking
+        SystemPerformanceMonitor perfMonitor = context.getPerformanceMonitor();
+        CSVParser parser = perfMonitor != null ? 
+            new CSVParser(csvFilePath, perfMonitor) : new CSVParser(csvFilePath);
         java.util.ArrayList<String[]> gradeData;
 
         try {
@@ -2608,8 +2616,71 @@ public class MenuHandler {
     }
     
     private void handleSystemPerformance() {
-        System.out.println("SYSTEM PERFORMANCE - See original Main.java for full implementation");
-        System.out.println("This is a simplified demonstration of SOLID architecture.\n");
+        try {
+            System.out.println("SYSTEM PERFORMANCE MONITOR");
+            System.out.println("_______________________________________________");
+            System.out.println();
+            
+            // Get performance monitor from ApplicationContext
+            SystemPerformanceMonitor performanceMonitor = context.getPerformanceMonitor();
+            if (performanceMonitor == null) {
+                System.out.println("X Performance monitor not initialized.");
+                System.out.println();
+                return;
+            }
+            
+            System.out.println("Performance Views:");
+            System.out.println("1. Resource Utilization (CPU, Memory, Threads)");
+            System.out.println("2. System Performance (Collections, Thread Pools, I/O)");
+            System.out.println("3. Detailed Performance Metrics");
+            System.out.println("4. Return to Main Menu");
+            System.out.println();
+            
+            System.out.print("Select view (1-4): ");
+            int viewChoice;
+            try {
+                viewChoice = ui.getScanner().nextInt();
+                ui.getScanner().nextLine();
+            } catch (InputMismatchException e) {
+                ui.getScanner().nextLine();
+                throw new InvalidMenuChoiceException("Please enter a valid number (1-4).");
+            }
+            
+            System.out.println();
+            
+            switch (viewChoice) {
+                case 1:
+                    // Resource Utilization
+                    performanceMonitor.displayResourceUtilization();
+                    break;
+                    
+                case 2:
+                    // System Performance
+                    performanceMonitor.displaySystemPerformance();
+                    break;
+                    
+                case 3:
+                    // Detailed Performance Metrics
+                    performanceMonitor.displayDetailedPerformance();
+                    break;
+                    
+                case 4:
+                    // Return to Main Menu
+                    return;
+                    
+                default:
+                    throw new InvalidMenuChoiceException("Invalid view choice. Please select 1-4.");
+            }
+            
+        } catch (InvalidMenuChoiceException e) {
+            System.out.println();
+            System.out.println(e.getMessage());
+            System.out.println();
+        } catch (Exception e) {
+            System.out.println();
+            System.out.println("X ERROR: " + e.getClass().getSimpleName() + "\n   " + e.getMessage());
+            System.out.println();
+        }
     }
     
     private void handleCacheManagement() {

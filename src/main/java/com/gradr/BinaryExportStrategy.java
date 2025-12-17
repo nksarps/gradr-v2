@@ -19,8 +19,20 @@ public class BinaryExportStrategy implements FileExportStrategy {
     private static final Path BINARY_DIR = Paths.get("./reports/binary/");
     private long lastFileSize = 0;
     private long lastWriteTime = 0;
+    private SystemPerformanceMonitor performanceMonitor;
     
     public BinaryExportStrategy() throws FileExportException {
+        try {
+            Files.createDirectories(BINARY_DIR);
+        } catch (IOException e) {
+            throw new FileExportException(
+                "X ERROR: FileExportException\n   Failed to create binary export directory: " + e.getMessage()
+            );
+        }
+    }
+
+    public BinaryExportStrategy(SystemPerformanceMonitor performanceMonitor) throws FileExportException {
+        this.performanceMonitor = performanceMonitor;
         try {
             Files.createDirectories(BINARY_DIR);
         } catch (IOException e) {
@@ -55,6 +67,11 @@ public class BinaryExportStrategy implements FileExportStrategy {
             lastFileSize = Files.size(filePath);
         } catch (IOException e) {
             lastFileSize = 0;
+        }
+
+        // Record I/O operation for performance monitoring
+        if (performanceMonitor != null) {
+            performanceMonitor.recordIOOperation("Binary Write", fileName + ".dat", lastWriteTime, lastFileSize, false);
         }
         
         return filePath;

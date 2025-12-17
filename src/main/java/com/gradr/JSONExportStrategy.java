@@ -22,8 +22,20 @@ public class JSONExportStrategy implements FileExportStrategy {
     private static final Path JSON_DIR = Paths.get("./reports/json/");
     private long lastFileSize = 0;
     private long lastWriteTime = 0;
+    private SystemPerformanceMonitor performanceMonitor;
     
     public JSONExportStrategy() throws FileExportException {
+        try {
+            Files.createDirectories(JSON_DIR);
+        } catch (IOException e) {
+            throw new FileExportException(
+                "X ERROR: FileExportException\n   Failed to create JSON export directory: " + e.getMessage()
+            );
+        }
+    }
+
+    public JSONExportStrategy(SystemPerformanceMonitor performanceMonitor) throws FileExportException {
+        this.performanceMonitor = performanceMonitor;
         try {
             Files.createDirectories(JSON_DIR);
         } catch (IOException e) {
@@ -85,6 +97,11 @@ public class JSONExportStrategy implements FileExportStrategy {
             lastFileSize = Files.size(filePath);
         } catch (IOException e) {
             lastFileSize = 0;
+        }
+
+        // Record I/O operation for performance monitoring
+        if (performanceMonitor != null) {
+            performanceMonitor.recordIOOperation("JSON Write", fileName + ".json", lastWriteTime, lastFileSize, false);
         }
         
         return filePath;

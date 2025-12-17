@@ -20,8 +20,20 @@ public class CSVExportStrategy implements FileExportStrategy {
     private static final Path CSV_DIR = Paths.get("./reports/csv/");
     private long lastFileSize = 0;
     private long lastWriteTime = 0;
+    private SystemPerformanceMonitor performanceMonitor;
     
     public CSVExportStrategy() throws FileExportException {
+        try {
+            Files.createDirectories(CSV_DIR);
+        } catch (IOException e) {
+            throw new FileExportException(
+                "X ERROR: FileExportException\n   Failed to create CSV export directory: " + e.getMessage()
+            );
+        }
+    }
+
+    public CSVExportStrategy(SystemPerformanceMonitor performanceMonitor) throws FileExportException {
+        this.performanceMonitor = performanceMonitor;
         try {
             Files.createDirectories(CSV_DIR);
         } catch (IOException e) {
@@ -74,6 +86,11 @@ public class CSVExportStrategy implements FileExportStrategy {
             lastFileSize = Files.size(filePath);
         } catch (IOException e) {
             lastFileSize = 0;
+        }
+
+        // Record I/O operation for performance monitoring
+        if (performanceMonitor != null) {
+            performanceMonitor.recordIOOperation("CSV Write", fileName + ".csv", lastWriteTime, lastFileSize, false);
         }
         
         return filePath;
