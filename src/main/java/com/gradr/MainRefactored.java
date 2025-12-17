@@ -14,7 +14,7 @@ import com.gradr.exceptions.FileExportException;
  * To run this version: java com.gradr.MainRefactored
  * To run original: java com.gradr.Main
  */
-public class Main {
+public class MainRefactored {
     
     public static void main(String[] args) {
         try {

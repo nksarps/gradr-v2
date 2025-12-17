@@ -1,470 +1,240 @@
 package com.gradr;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.function.Supplier;
 
 /**
- * GradeManager - Optimized with multiple collection types for efficient operations
+ * GradeManager - Facade for grade management operations
+ * Refactored to adhere to Single Responsibility Principle
+ * Delegates to specialized services for different responsibilities
  * 
- * Collection Optimizations:
- * - Collections.synchronizedList<Grade>: O(1) for frequent insertions/deletions in grade history (thread-safe)
- * - Collections.synchronizedMap<TreeMap>: O(log n) for organizing grades by subject name (thread-safe)
- * - Collections.synchronizedSet<HashSet>: O(1) average case for tracking unique courses (thread-safe)
- * - Collections.synchronizedMap<TreeMap>: O(log n) for sorted GPA rankings (thread-safe)
- * - Collections.synchronizedCollection<PriorityQueue>: O(log n) for task scheduling (thread-safe)
- * - ConcurrentHashMap<String, Statistics>: O(1) thread-safe statistics cache
- * - ConcurrentLinkedQueue<AuditEntry>: Thread-safe, non-blocking audit logging
+ * Design Pattern: Facade Pattern
+ * - Provides a unified interface to a set of interfaces in a subsystem
+ * - Delegates to GradeRepository, GradeCalculator, GradeAuditService, etc.
+ * 
+ * Implements IGradeCalculator for backward compatibility with Student class
  * 
  * Thread Safety:
- * - All modification operations (addGrade, removeGrade, updateGPARanking) are synchronized
- * - Collections wrapped with Collections.synchronized* for thread-safe access
- * - Iteration over collections requires external synchronization
+ * - Thread-safety is handled by individual services
  */
-class GradeManager {
-    // Synchronized LinkedList for grade history - optimized for frequent insertions/deletions
-    // Time Complexity: O(1) for add/remove at ends, O(n) for search
-    // Maintains chronological order per student
-    // Thread-safe: All operations synchronized
-    private final List<Grade> gradeHistory = Collections.synchronizedList(new LinkedList<>());
+class GradeManager implements IGradeCalculator {
+    // Specialized services (adhering to SRP)
+    private final GradeRepository gradeRepository;
+    private final GradeCalculator gradeCalculator;
+    private final GradeAuditService auditService;
+    private final GPARankingService rankingService;
+    private final TaskSchedulerService taskScheduler;
+    private final StatisticsService statisticsService;
     
-    // Synchronized TreeMap for organizing grades by subject name
-    // Time Complexity: O(log n) for put, get, remove operations
-    // Automatically sorted by subject name, used for subject-wise reports
-    // Thread-safe: All operations synchronized
-    private final Map<String, List<Grade>> subjectGrades = Collections.synchronizedMap(new TreeMap<>());
-    
-    // Synchronized HashSet for tracking unique courses enrolled across all students
-    // Time Complexity: O(1) average case for add, contains, remove operations
-    // Thread-safe: All operations synchronized
-    private final Set<String> uniqueCourses = Collections.synchronizedSet(new HashSet<>());
-    
-    // Synchronized TreeMap for sorted GPA rankings (GPA -> List of Students with that GPA)
-    // Time Complexity: O(log n) for put, get, remove operations
-    // Automatically maintains sorted order by GPA (descending)
-    // Thread-safe: All operations synchronized
-    private final Map<Double, List<Student>> gpaRankings = Collections.synchronizedMap(
-        new TreeMap<>(Collections.reverseOrder()));
-    
-    // Synchronized PriorityQueue for task scheduling based on priority
-    // Time Complexity: O(log n) for offer/poll operations, O(1) for peek
-    // Tasks ordered by priority and scheduled time
-    // Thread-safe: All operations synchronized
-    private final PriorityQueue<Task> taskQueue = new PriorityQueue<>();
-    
-    // ConcurrentHashMap for thread-safe statistics cache
-    // Time Complexity: O(1) average case for concurrent access
-    // No blocking during read operations, thread-safe statistics caching
-    private Map<String, Statistics> statsCache = new ConcurrentHashMap<>();
-    
-    // ConcurrentLinkedQueue for thread-safe, non-blocking audit logging
-    // Allows multiple threads to add entries simultaneously
-    // Background thread drains entries to file
-    private Queue<AuditEntry> auditLog = new ConcurrentLinkedQueue<>();
-
     /**
-     * Add grade to synchronized LinkedList (maintains insertion order)
-     * Time Complexity: O(1) - LinkedList add + O(log n) - TreeMap put
-     * Also tracks unique courses in HashSet and organizes by subject in TreeMap
-     * Thread-safe: Synchronized to ensure atomic update of all collections
+     * Constructor - initializes all services
      */
-    public synchronized void addGrade(Grade grade){
-        // O(1) - Synchronized LinkedList add operation (maintains chronological order)
-        gradeHistory.add(grade);
-        
-        // O(log n) - Synchronized TreeMap put operation (organize by subject name)
-        String subjectName = grade.getSubject().getSubjectName();
-        synchronized (subjectGrades) {
-            subjectGrades.computeIfAbsent(subjectName, k -> Collections.synchronizedList(new ArrayList<>())).add(grade);
-        }
-        
-        // O(1) average case - Synchronized HashSet add operation for unique course tracking
-        String courseKey = grade.getSubject().getSubjectName() + " (" + grade.getSubject().getSubjectType() + ")";
-        uniqueCourses.add(courseKey);
-        
-        // Invalidate statistics cache when new grade is added
-        statsCache.clear();
-        
-        // Add audit entry (non-blocking, thread-safe)
-        auditLog.offer(new AuditEntry(AuditEntry.AuditAction.GRADE_RECORDED, 
-            "SYSTEM", grade.getStudentId(), 
-            String.format("Grade %s recorded for %s", grade.getGradeId(), subjectName)));
+    public GradeManager() {
+        this.gradeRepository = new GradeRepository();
+        this.gradeCalculator = new GradeCalculator(gradeRepository);
+        this.auditService = new GradeAuditService();
+        this.rankingService = new GPARankingService();
+        this.taskScheduler = new TaskSchedulerService();
+        this.statisticsService = new StatisticsService();
+    }
+    
+    /**
+     * Constructor with dependency injection (for testing and flexibility)
+     */
+    public GradeManager(GradeRepository gradeRepository, 
+                       GradeCalculator gradeCalculator,
+                       GradeAuditService auditService,
+                       GPARankingService rankingService,
+                       TaskSchedulerService taskScheduler,
+                       StatisticsService statisticsService) {
+        this.gradeRepository = gradeRepository;
+        this.gradeCalculator = gradeCalculator;
+        this.auditService = auditService;
+        this.rankingService = rankingService;
+        this.taskScheduler = taskScheduler;
+        this.statisticsService = statisticsService;
     }
 
     /**
-     * View grades by student ID
-     * Time Complexity: O(n) where n is the number of grades (must iterate through all)
-     * Thread-safe: Synchronized iteration to prevent ConcurrentModificationException
+     * Add grade - delegates to repository and logs to audit service
+     * Time Complexity: O(1) + O(log n)
+     */
+    public void addGrade(Grade grade){
+        gradeRepository.addGrade(grade);
+        auditService.logGradeAdded(grade);
+        statisticsService.clearStatisticsCache();
+    }
+
+    /**
+     * View grades by student ID - delegates to calculator
      */
     public String viewGradesByStudent(String studentId) {
-        StringBuilder sb = new StringBuilder();
-        boolean found = false;
-        int totalCourses = 0;
-
-        // O(n) - Iterate through all grades in synchronized LinkedList
-        synchronized (gradeHistory) {
-            for (Grade grade : gradeHistory) {
-                if (grade.getStudentId().equals(studentId)) {
-                    totalCourses++;
-
-                    if (!found) {
-                        sb.append("GRADE HISTORY\n");
-                        sb.append("-------------------------------------------------------------------------------------\n");
-                        sb.append("GRD ID   | DATE       | SUBJECT          | TYPE       | GRADE\n");
-                        sb.append("-------------------------------------------------------------------------------------\n");
-                        found = true;
-                    }
-
-                    sb.append(String.format("%-9s | %-10s | %-16s | %-10s | %-5.1f%%\n",
-                            grade.getGradeId(),
-                            grade.getDate(),
-                            grade.getSubject().getSubjectName(),
-                            grade.getSubject().getSubjectType(),
-                            grade.getGrade()));
-                }
-            }
-        }
-
-        if (!found) {
-            sb.append("_______________________________________________\n");
-            sb.append("No grades recorded for this student\n");
-            sb.append("_______________________________________________\n\n");
-        } else {
-            sb.append("\n");
-            sb.append(String.format("Total Grades: %d\n", totalCourses));
-            sb.append(String.format("Core Subjects Average: %.1f%%\n", calculateCoreAverage(studentId)));
-            sb.append(String.format("Elective Subjects Average: %.1f%%\n", calculateElectiveAverage(studentId)));
-            sb.append(String.format("Overall Average: %.1f%%\n", calculateOverallAverage(studentId)));
-        }
-
-        return sb.toString();
+        return gradeCalculator.viewGradesByStudent(studentId);
     }
 
-
     /**
-     * Calculate core subject average for a student
-     * Time Complexity: O(n) where n is the number of grades
-     * Thread-safe: Synchronized iteration to prevent ConcurrentModificationException
+     * Calculate core subject average - delegates to calculator
      */
     public double calculateCoreAverage(String studentId) {
-        double gradeSum = 0;
-        int totalCourses = 0;
-
-        // O(n) - Iterate through all grades (synchronized)
-        synchronized (gradeHistory) {
-            for (Grade grade : gradeHistory) {
-                if (grade.getStudentId().equals(studentId)) {
-                    if (grade.getSubject().getSubjectType().equals("Core")) {
-                        gradeSum += grade.getGrade();
-                        totalCourses++;
-                    }
-                }
-            }
-        }
-
-        if (totalCourses == 0) return 0.0;
-        return gradeSum / totalCourses;
+        return gradeCalculator.calculateCoreAverage(studentId);
     }
 
     /**
-     * Calculate elective subject average for a student
-     * Time Complexity: O(n) where n is the number of grades
-     * Thread-safe: Synchronized iteration to prevent ConcurrentModificationException
+     * Calculate elective subject average - delegates to calculator
      */
     public double calculateElectiveAverage(String studentId) {
-        double gradeSum = 0;
-        int totalCourses = 0;
-
-        // O(n) - Iterate through all grades (synchronized)
-        synchronized (gradeHistory) {
-            for (Grade grade : gradeHistory) {
-                if (grade.getStudentId().equals(studentId)) {
-                    if (grade.getSubject().getSubjectType().equals("Elective")) {
-                        gradeSum += grade.getGrade();
-                        totalCourses++;
-                    }
-                }
-            }
-        }
-
-        if (totalCourses == 0) return 0.0;
-        return gradeSum / totalCourses;
+        return gradeCalculator.calculateElectiveAverage(studentId);
     }
 
     /**
-     * Calculate overall average for a student
-     * Time Complexity: O(n) where n is the number of grades
-     * Thread-safe: Synchronized iteration to prevent ConcurrentModificationException
+     * Calculate overall average - delegates to calculator
      */
     public double calculateOverallAverage(String studentId) {
-        double gradeSum = 0;
-        int totalCourses = 0;
-
-        // O(n) - Iterate through all grades (synchronized)
-        synchronized (gradeHistory) {
-            for (Grade grade : gradeHistory) {
-                if (grade.getStudentId().equals(studentId)) {
-                    gradeSum += grade.getGrade();
-                    totalCourses++;
-                }
-            }
-        }
-
-        if (totalCourses == 0) return 0.0;
-        return gradeSum / totalCourses;
+        return gradeCalculator.calculateOverallAverage(studentId);
     }
 
     /**
-     * Get total grade count
-     * Time Complexity: O(1) - LinkedList size operation
+     * Get total grade count - delegates to repository
      */
     public int getGradeCount() {
-        return gradeHistory.size();
+        return gradeRepository.getGradeCount();
     }
 
     /**
-     * Get all grades as array (for backward compatibility)
-     * Time Complexity: O(n) where n is the number of grades
+     * Get all grades as array - delegates to repository
      */
     public Grade[] getGrades() {
-        return gradeHistory.toArray(new Grade[0]);
+        return gradeRepository.getGrades();
     }
     
     /**
-     * Get all grades as list
-     * Time Complexity: O(1) - Returns reference to list
+     * Get all grades as list - delegates to repository
      */
     public List<Grade> getGradeHistory() {
-        return new LinkedList<>(gradeHistory); // Return copy to prevent external modification
+        return gradeRepository.getAllGrades();
     }
 
     /**
-     * Get number of enrolled subjects for a student
-     * Time Complexity: O(n) where n is the number of grades
-     * Thread-safe: Synchronized iteration to prevent ConcurrentModificationException
+     * Get number of enrolled subjects - delegates to repository
      */
     public int getEnrolledSubjectsCount(String studentId) {
-        int subjectCount = 0;
-
-        // O(n) - Iterate through all grades (synchronized)
-        synchronized (gradeHistory) {
-            for (Grade grade : gradeHistory) {
-                if (grade.getStudentId().equals(studentId)) {
-                    subjectCount++;
-                }
-            }
-        }
-
-        return subjectCount;
+        return gradeRepository.getEnrolledSubjectsCount(studentId);
     }
     
     /**
-     * Get unique courses enrolled across all students
-     * Time Complexity: O(1) - Returns reference to set
-     * @return Set of unique course names
+     * Get unique courses - delegates to repository
      */
     public Set<String> getUniqueCourses() {
-        return new HashSet<>(uniqueCourses); // Return copy to prevent external modification
+        return gradeRepository.getUniqueCourses();
     }
     
     /**
-     * Update GPA rankings in synchronized TreeMap
-     * Time Complexity: O(log n) where n is the number of unique GPA values
-     * Thread-safe: Synchronized to ensure atomic update
-     * @param student The student to add/update in rankings
-     * @param gpa The student's GPA
+     * Update GPA ranking - delegates to ranking service
      */
-    public synchronized void updateGPARanking(Student student, double gpa) {
-        // Remove student from old GPA entry if exists (synchronized iteration)
-        synchronized (gpaRankings) {
-            for (List<Student> students : gpaRankings.values()) {
-                students.remove(student);
-            }
-            
-            // Add student to new GPA entry
-            // O(log n) - Synchronized TreeMap put operation
-            gpaRankings.computeIfAbsent(gpa, k -> Collections.synchronizedList(new ArrayList<>())).add(student);
-        }
+    public void updateGPARanking(Student student, double gpa) {
+        rankingService.updateGPARanking(student, gpa);
     }
     
     /**
-     * Get sorted GPA rankings
-     * Time Complexity: O(1) - Returns reference to map
-     * @return TreeMap with GPA as key (sorted in descending order) and list of students as value
+     * Get sorted GPA rankings - delegates to ranking service
      */
     public Map<Double, List<Student>> getGPARankings() {
-        return new TreeMap<>(gpaRankings); // Return copy to prevent external modification
+        return rankingService.getGPARankings();
     }
     
     /**
-     * Remove grade from history (for grade corrections/deletions)
-     * Time Complexity: O(n) - Must search LinkedList to find grade + O(log n) for TreeMap removal
-     * Thread-safe: Synchronized to ensure atomic removal from all collections
-     * @param grade The grade to remove
-     * @return true if grade was removed, false otherwise
+     * Remove grade - delegates to repository and logs audit
      */
-    public synchronized boolean removeGrade(Grade grade) {
-        // O(n) - Synchronized LinkedList remove operation (must find element first)
-        boolean removed = gradeHistory.remove(grade);
-        
+    public boolean removeGrade(Grade grade) {
+        boolean removed = gradeRepository.removeGrade(grade);
         if (removed) {
-            // O(log n) - Remove from synchronized subjectGrades TreeMap
-            String subjectName = grade.getSubject().getSubjectName();
-            synchronized (subjectGrades) {
-                List<Grade> subjectGradeList = subjectGrades.get(subjectName);
-                if (subjectGradeList != null) {
-                    subjectGradeList.remove(grade);
-                    if (subjectGradeList.isEmpty()) {
-                        subjectGrades.remove(subjectName);
-                    }
-                }
-            }
-            
-            // Invalidate statistics cache
-            statsCache.clear();
-            
-            // Add audit entry (non-blocking, thread-safe)
-            auditLog.offer(new AuditEntry(AuditEntry.AuditAction.GRADE_DELETED, 
-                "SYSTEM", grade.getStudentId(), 
-                String.format("Grade %s deleted", grade.getGradeId())));
+            auditService.logGradeDeleted(grade);
+            statisticsService.clearStatisticsCache();
         }
-        
         return removed;
     }
     
     /**
-     * Add task to priority queue
-     * Time Complexity: O(log n) where n is the number of tasks in queue
-     * Thread-safe: Synchronized to prevent concurrent modification
-     * @param task The task to add
+     * Schedule task - delegates to task scheduler
      */
-    public synchronized void scheduleTask(Task task) {
-        // O(log n) - PriorityQueue offer operation
-        taskQueue.offer(task);
+    public void scheduleTask(Task task) {
+        taskScheduler.scheduleTask(task);
     }
     
     /**
-     * Get and remove the highest priority task
-     * Time Complexity: O(log n) where n is the number of tasks in queue
-     * Thread-safe: Synchronized to prevent concurrent modification
-     * @return The highest priority task, or null if queue is empty
+     * Process next task - delegates to task scheduler
      */
-    public synchronized Task processNextTask() {
-        // O(log n) - PriorityQueue poll operation
-        return taskQueue.poll();
+    public Task processNextTask() {
+        return taskScheduler.processNextTask();
     }
     
     /**
-     * Peek at the highest priority task without removing it
-     * Time Complexity: O(1) - PriorityQueue peek operation
-     * Thread-safe: Synchronized to prevent concurrent modification
-     * @return The highest priority task, or null if queue is empty
+     * Peek next task - delegates to task scheduler
      */
-    public synchronized Task peekNextTask() {
-        // O(1) - PriorityQueue peek operation
-        return taskQueue.peek();
+    public Task peekNextTask() {
+        return taskScheduler.peekNextTask();
     }
     
     /**
-     * Get the number of pending tasks
-     * Time Complexity: O(1) - Queue size operation
-     * Thread-safe: Synchronized to prevent concurrent modification
-     * @return Number of tasks in queue
+     * Get pending task count - delegates to task scheduler
      */
-    public synchronized int getPendingTaskCount() {
-        return taskQueue.size();
+    public int getPendingTaskCount() {
+        return taskScheduler.getPendingTaskCount();
     }
     
     /**
-     * Check if there are pending tasks
-     * Time Complexity: O(1) - Queue isEmpty operation
-     * Thread-safe: Synchronized to prevent concurrent modification
-     * @return true if there are pending tasks, false otherwise
+     * Check if has pending tasks - delegates to task scheduler
      */
-    public synchronized boolean hasPendingTasks() {
-        return !taskQueue.isEmpty();
+    public boolean hasPendingTasks() {
+        return taskScheduler.hasPendingTasks();
     }
     
     /**
-     * Get grades organized by subject name
-     * Time Complexity: O(1) - Returns reference to map
-     * @return TreeMap with subject name as key and list of grades as value
+     * Get subject grades - delegates to repository
      */
     public Map<String, List<Grade>> getSubjectGrades() {
-        return new TreeMap<>(subjectGrades); // Return copy to prevent external modification
+        return gradeRepository.getSubjectGrades();
     }
     
     /**
-     * Get grades for a specific subject
-     * Time Complexity: O(log n) - TreeMap get operation
-     * @param subjectName The name of the subject
-     * @return List of grades for the subject, or empty list if not found
+     * Get grades by subject - delegates to repository
      */
     public List<Grade> getGradesBySubject(String subjectName) {
-        List<Grade> grades = subjectGrades.get(subjectName);
-        return grades != null ? new ArrayList<>(grades) : new ArrayList<>();
+        return gradeRepository.getGradesBySubject(subjectName);
     }
     
     /**
-     * Get or compute statistics with caching
-     * Time Complexity: O(1) average case if cached, O(n) if needs computation
-     * @param cacheKey Key for the statistics cache
-     * @param calculator Function to compute statistics if not cached
-     * @return Statistics object
+     * Get statistics with caching - delegates to statistics service
      */
-    public Statistics getStatistics(String cacheKey, java.util.function.Supplier<Statistics> calculator) {
-        // O(1) - ConcurrentHashMap get operation (thread-safe, no blocking)
-        Statistics stats = statsCache.get(cacheKey);
-        
-        if (stats == null || stats.isExpired(5)) { // 5 minute cache timeout
-            // Compute statistics
-            stats = calculator.get();
-            // O(1) - ConcurrentHashMap put operation (thread-safe)
-            statsCache.put(cacheKey, stats);
-        }
-        
-        return stats;
+    public Statistics getStatistics(String cacheKey, Supplier<Statistics> calculator) {
+        return statisticsService.getStatistics(cacheKey, calculator);
     }
     
     /**
-     * Clear statistics cache
-     * Time Complexity: O(1) - ConcurrentHashMap clear operation
+     * Clear statistics cache - delegates to statistics service
      */
     public void clearStatisticsCache() {
-        statsCache.clear();
+        statisticsService.clearStatisticsCache();
     }
     
     /**
-     * Add audit entry to log (non-blocking)
-     * Time Complexity: O(1) - ConcurrentLinkedQueue offer operation
-     * @param entry The audit entry to add
+     * Add audit entry - delegates to audit service
      */
     public void addAuditEntry(AuditEntry entry) {
-        // O(1) - ConcurrentLinkedQueue offer (non-blocking, thread-safe)
-        auditLog.offer(entry);
+        auditService.addAuditEntry(entry);
     }
     
     /**
-     * Get all audit entries (for processing by background thread)
-     * Time Complexity: O(n) where n is the number of entries
-     * @return List of audit entries
+     * Drain audit log - delegates to audit service
      */
     public List<AuditEntry> drainAuditLog() {
-        List<AuditEntry> entries = new ArrayList<>();
-        AuditEntry entry;
-        // Drain queue (non-blocking)
-        while ((entry = auditLog.poll()) != null) {
-            entries.add(entry);
-        }
-        return entries;
+        return auditService.drainAuditLog();
     }
     
     /**
-     * Get current audit log size
-     * Time Complexity: O(1) - Queue size operation
-     * @return Number of pending audit entries
+     * Get audit log size - delegates to audit service
      */
     public int getAuditLogSize() {
-        return auditLog.size();
+        return auditService.getAuditLogSize();
     }
 }

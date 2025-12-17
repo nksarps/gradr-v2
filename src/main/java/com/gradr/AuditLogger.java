@@ -90,6 +90,7 @@ public class AuditLogger {
             if (parts.length < 7) return null;
             
             try {
+                // Create entry with parsed data
                 String operationType = parts[2];
                 String userAction = parts[3];
                 long executionTime = Long.parseLong(parts[4]);
@@ -101,6 +102,16 @@ public class AuditLogger {
                 
                 EnhancedAuditEntry entry = new EnhancedAuditEntry(
                     operationType, userAction, executionTime, success, errorMessage, details);
+                
+                // Override timestamp and threadId from file
+                java.lang.reflect.Field timestampField = EnhancedAuditEntry.class.getDeclaredField("timestamp");
+                timestampField.setAccessible(true);
+                timestampField.set(entry, parts[0]);
+                
+                java.lang.reflect.Field threadIdField = EnhancedAuditEntry.class.getDeclaredField("threadId");
+                threadIdField.setAccessible(true);
+                threadIdField.set(entry, Long.parseLong(parts[1]));
+                
                 return entry;
             } catch (Exception e) {
                 return null;
@@ -167,8 +178,8 @@ public class AuditLogger {
                         writeEntriesToFile(entries);
                     }
                     
-                    // Sleep briefly to avoid busy waiting
-                    Thread.sleep(100);
+                    // Sleep briefly to avoid busy waiting (reduced for faster writes)
+                    Thread.sleep(50);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     break;
@@ -207,58 +218,17 @@ public class AuditLogger {
             }
         }
         
-        // Write entries with file locking to prevent concurrent access
-        try (java.nio.channels.FileChannel channel = java.nio.channels.FileChannel.open(
+        // Write entries - simplified approach without explicit file locking
+        // The single-threaded executor ensures sequential writes
+        try (BufferedWriter writer = Files.newBufferedWriter(
                 currentLogFile, 
-                java.nio.file.StandardOpenOption.CREATE, 
-                java.nio.file.StandardOpenOption.APPEND, 
-                java.nio.file.StandardOpenOption.WRITE)) {
-            
-            // Acquire exclusive lock for writing
-            java.nio.channels.FileLock lock = channel.tryLock();
-            if (lock != null) {
-                try {
-                    // Write entries
-                    try (BufferedWriter writer = Files.newBufferedWriter(
-                            currentLogFile, 
-                            StandardOpenOption.CREATE, 
-                            StandardOpenOption.APPEND)) {
-                        for (EnhancedAuditEntry entry : entries) {
-                            writer.write(entry.toLogLine());
-                            writer.newLine();
-                        }
-                        writer.flush(); // Ensure data is written before releasing lock
-                    }
-                } finally {
-                    lock.release();
-                }
-            } else {
-                // Lock could not be acquired - wait briefly and retry once
-                Thread.sleep(10);
-                lock = channel.tryLock();
-                if (lock != null) {
-                    try {
-                        try (BufferedWriter writer = Files.newBufferedWriter(
-                                currentLogFile, 
-                                StandardOpenOption.CREATE, 
-                                StandardOpenOption.APPEND)) {
-                            for (EnhancedAuditEntry entry : entries) {
-                                writer.write(entry.toLogLine());
-                                writer.newLine();
-                            }
-                            writer.flush();
-                        }
-                    } finally {
-                        lock.release();
-                    }
-                } else {
-                    // If lock still cannot be acquired, log error but don't fail
-                    System.err.println("Warning: Could not acquire file lock for audit log, entry may be lost");
-                }
+                StandardOpenOption.CREATE, 
+                StandardOpenOption.APPEND)) {
+            for (EnhancedAuditEntry entry : entries) {
+                writer.write(entry.toLogLine());
+                writer.newLine();
             }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IOException("Interrupted while waiting for file lock", e);
+            writer.flush();
         }
     }
     
@@ -354,6 +324,26 @@ public class AuditLogger {
      */
     public long getTotalEntries() {
         return totalEntries.get();
+    }
+    
+    /**
+     * Force flush of pending entries (useful for immediate audit trail viewing)
+     */
+    public void flush() {
+        // Trigger immediate write by interrupting sleep
+        List<EnhancedAuditEntry> entries = new ArrayList<>();
+        EnhancedAuditEntry entry;
+        while ((entry = logQueue.poll()) != null) {
+            entries.add(entry);
+        }
+        
+        if (!entries.isEmpty()) {
+            try {
+                writeEntriesToFile(entries);
+            } catch (IOException e) {
+                System.err.println("Error flushing audit entries: " + e.getMessage());
+            }
+        }
     }
 }
 
