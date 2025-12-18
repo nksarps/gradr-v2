@@ -341,9 +341,32 @@ public class MenuHandler {
         System.out.println("STU ID   | NAME                    | TYPE               | AVG GRADE         | STATUS                ");
         System.out.println("----------------------------------------------------------------------------------------------------");
         
+        // Display minimum 5 students (3 Regular, 2 Honors) as per US-1
+        int regularCount = 0;
+        int honorsCount = 0;
+        int displayedCount = 0;
+        
         for (Student student : studentManager.getStudentsList()) {
-            student.displayStudentDetails();
-            System.out.println("----------------------------------------------------------------------------------------------------");
+            boolean shouldDisplay = false;
+            
+            if (student.getStudentType().equals("Regular") && regularCount < 3) {
+                shouldDisplay = true;
+                regularCount++;
+            } else if (student.getStudentType().equals("Honors") && honorsCount < 2) {
+                shouldDisplay = true;
+                honorsCount++;
+            }
+            
+            if (shouldDisplay) {
+                student.displayStudentDetails();
+                System.out.println("----------------------------------------------------------------------------------------------------");
+                displayedCount++;
+            }
+            
+            // Stop after displaying minimum 5 students (3 Regular, 2 Honors)
+            if (displayedCount >= 5 && regularCount >= 3 && honorsCount >= 2) {
+                break;
+            }
         }
         
         System.out.printf("\nTotal Students: %d\n", studentManager.getStudentCount());
