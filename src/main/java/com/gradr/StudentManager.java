@@ -2,57 +2,87 @@ package com.gradr;
 
 import com.gradr.exceptions.StudentNotFoundException;
 
+import java.util.*;
+
+/**
+ * StudentManager - Facade for student management operations
+ * Refactored to adhere to Single Responsibility Principle
+ * Delegates to specialized services for different responsibilities
+ * 
+ * Design Pattern: Facade Pattern
+ * - Provides a unified interface to a set of interfaces in a subsystem
+ * - Delegates to StudentRepository and StudentStatistics
+ * 
+ * Thread Safety:
+ * - Thread-safety is handled by individual services
+ */
 class StudentManager {
-    private Student[] students = new Student[50];
-    private int studentCount = 0;
+    // Specialized services (adhering to SRP)
+    private final StudentRepository studentRepository;
+    private final StudentStatistics studentStatistics;
+    
+    /**
+     * Constructor - initializes all services
+     */
+    public StudentManager() {
+        this.studentRepository = new StudentRepository();
+        this.studentStatistics = new StudentStatistics(studentRepository);
+    }
+    
+    /**
+     * Constructor with dependency injection (for testing and flexibility)
+     */
+    public StudentManager(StudentRepository studentRepository, StudentStatistics studentStatistics) {
+        this.studentRepository = studentRepository;
+        this.studentStatistics = studentStatistics;
+    }
 
-    // added student to the counter array
+    /**
+     * Add student - delegates to repository
+     */
     public void addStudent(Student student) {
-        students[studentCount] = student;
-        studentCount++;
+        studentRepository.addStudent(student);
     }
 
+    /**
+     * Find student by ID - delegates to repository
+     */
     public Student findStudent(String studentId) throws StudentNotFoundException {
-        for (Student student : students) {
-            if (student == null) continue;
-
-            if (student.getStudentId().equals(studentId)) {
-                return student;
-            }
-        }
-
-        throw new StudentNotFoundException(
-                "X ERROR: StudentNotFoundException\n   Student with ID '" + studentId + "' does not exist"
-        );
+        return studentRepository.findStudent(studentId);
     }
 
-
-    // Returns are students
+    /**
+     * View all students - delegates to repository
+     */
     public void viewAllStudents() {
-        // return students; // Return type was Student[]
-        System.out.println(students.toString());
+        studentRepository.viewAllStudents();
     }
 
-    // produces the number of students
+    /**
+     * Get student count - delegates to repository
+     */
     public int getStudentCount() {
-        return studentCount;
+        return studentRepository.getStudentCount();
     }
 
-    // Getter for students array
+    /**
+     * Get all students as array - delegates to repository
+     */
     public Student[] getStudents() {
-        return students;
+        return studentRepository.getStudents();
+    }
+    
+    /**
+     * Get all students as list - delegates to repository
+     */
+    public List<Student> getStudentsList() {
+        return studentRepository.getStudentsList();
     }
 
-    // Calculating the average grade for the whole class to be displayed in the option 2
-    // in the main menu
+    /**
+     * Calculate class average - delegates to statistics
+     */
     public double calculateClassAverage() {
-        double totalAverage = 0;
-
-        // Calculating the average of all the students added
-        for (int i = 0; i < studentCount; i++) {
-            totalAverage += students[i].calculateAverageGrade();
-        }
-
-        return totalAverage / getStudentCount();
+        return studentStatistics.calculateClassAverage();
     }
 }

@@ -1,145 +1,240 @@
 package com.gradr;
 
-class GradeManager {
-    private Grade[] grades = new Grade[200];
-    private int gradeCount;
+import java.util.*;
+import java.util.function.Supplier;
 
+/**
+ * GradeManager - Facade for grade management operations
+ * Refactored to adhere to Single Responsibility Principle
+ * Delegates to specialized services for different responsibilities
+ * 
+ * Design Pattern: Facade Pattern
+ * - Provides a unified interface to a set of interfaces in a subsystem
+ * - Delegates to GradeRepository, GradeCalculator, GradeAuditService, etc.
+ * 
+ * Implements IGradeCalculator for backward compatibility with Student class
+ * 
+ * Thread Safety:
+ * - Thread-safety is handled by individual services
+ */
+class GradeManager implements IGradeCalculator {
+    // Specialized services (adhering to SRP)
+    private final GradeRepository gradeRepository;
+    private final GradeCalculator gradeCalculator;
+    private final GradeAuditService auditService;
+    private final GPARankingService rankingService;
+    private final TaskSchedulerService taskScheduler;
+    private final StatisticsService statisticsService;
+    
+    /**
+     * Constructor - initializes all services
+     */
+    public GradeManager() {
+        this.gradeRepository = new GradeRepository();
+        this.gradeCalculator = new GradeCalculator(gradeRepository);
+        this.auditService = new GradeAuditService();
+        this.rankingService = new GPARankingService();
+        this.taskScheduler = new TaskSchedulerService();
+        this.statisticsService = new StatisticsService();
+    }
+    
+    /**
+     * Constructor with dependency injection (for testing and flexibility)
+     */
+    public GradeManager(GradeRepository gradeRepository, 
+                       GradeCalculator gradeCalculator,
+                       GradeAuditService auditService,
+                       GPARankingService rankingService,
+                       TaskSchedulerService taskScheduler,
+                       StatisticsService statisticsService) {
+        this.gradeRepository = gradeRepository;
+        this.gradeCalculator = gradeCalculator;
+        this.auditService = auditService;
+        this.rankingService = rankingService;
+        this.taskScheduler = taskScheduler;
+        this.statisticsService = statisticsService;
+    }
+
+    /**
+     * Add grade - delegates to repository and logs to audit service
+     * Time Complexity: O(1) + O(log n)
+     */
     public void addGrade(Grade grade){
-        grades[gradeCount] = grade;
-        gradeCount++;
+        gradeRepository.addGrade(grade);
+        auditService.logGradeAdded(grade);
+        statisticsService.clearStatisticsCache();
     }
 
+    /**
+     * View grades by student ID - delegates to calculator
+     */
     public String viewGradesByStudent(String studentId) {
-        StringBuilder sb = new StringBuilder();
-        boolean found = false;
-        int totalCourses = 0;
-
-        for (Grade grade : grades) {
-            if (grade == null) continue;
-
-            if (grade.getStudentId().equals(studentId)) {
-                totalCourses++;
-
-                if (!found) {
-                    sb.append("GRADE HISTORY\n");
-                    sb.append("-------------------------------------------------------------------------------------\n");
-                    sb.append("GRD ID   | DATE       | SUBJECT          | TYPE       | GRADE\n");
-                    sb.append("-------------------------------------------------------------------------------------\n");
-                    found = true;
-                }
-
-                sb.append(String.format("%-9s | %-10s | %-16s | %-10s | %-5.1f%%\n",
-                        grade.getGradeId(),
-                        grade.getDate(),
-                        grade.getSubject().getSubjectName(),
-                        grade.getSubject().getSubjectType(),
-                        grade.getGrade()));
-            }
-        }
-
-        if (!found) {
-            sb.append("_______________________________________________\n");
-            sb.append("No grades recorded for this student\n");
-            sb.append("_______________________________________________\n\n");
-        } else {
-            sb.append("\n");
-            sb.append(String.format("Total Grades: %d\n", totalCourses));
-            sb.append(String.format("Core Subjects Average: %.1f%%\n", calculateCoreAverage(studentId)));
-            sb.append(String.format("Elective Subjects Average: %.1f%%\n", calculateElectiveAverage(studentId)));
-            sb.append(String.format("Overall Average: %.1f%%\n", calculateOverallAverage(studentId)));
-        }
-
-        return sb.toString();
+        return gradeCalculator.viewGradesByStudent(studentId);
     }
 
-
+    /**
+     * Calculate core subject average - delegates to calculator
+     */
     public double calculateCoreAverage(String studentId) {
-        double gradeSum = 0;
-        int totalCourses = 0;
-
-        for (Grade grade : grades) {
-            if (grade == null) continue;
-
-            if (grade.getStudentId().equals(studentId)) {
-                if (grade.getSubject().getSubjectType().equals("Core")) {
-                    gradeSum += grade.getGrade();
-                    totalCourses++;
-                }
-            }
-        }
-
-        // To prevent the method from throwing an error by dividing by 0
-        // if there are no core subjects
-        if (totalCourses == 0) return 0.0;
-
-        return gradeSum / totalCourses;
+        return gradeCalculator.calculateCoreAverage(studentId);
     }
 
+    /**
+     * Calculate elective subject average - delegates to calculator
+     */
     public double calculateElectiveAverage(String studentId) {
-        double gradeSum = 0;
-        int totalCourses = 0;
-
-        for (Grade grade : grades) {
-            if (grade == null) continue;
-
-            if (grade.getStudentId().equals(studentId)) {
-                if (grade.getSubject().getSubjectType().equals("Elective")) {
-                    gradeSum += grade.getGrade();
-                    totalCourses++;
-                }
-            }
-        }
-
-        // To prevent the method from throwing an error by dividing by 0
-        // if there are no elective subjects
-        if (totalCourses == 0) return 0.0;
-
-        return gradeSum / totalCourses;
+        return gradeCalculator.calculateElectiveAverage(studentId);
     }
 
+    /**
+     * Calculate overall average - delegates to calculator
+     */
     public double calculateOverallAverage(String studentId) {
-        double gradeSum = 0;
-        int totalCourses = 0;
-
-        for (Grade grade : grades) {
-            // To prevent an error if the grades array is empty
-            if (grade == null) continue;
-
-            if (grade.getStudentId().equals(studentId)) {
-                gradeSum += grade.getGrade();
-                totalCourses++;
-            }
-        }
-
-        // To prevent the method from throwing an error by dividing by 0
-        // if there are no subjects
-        if (totalCourses == 0) return 0.0;
-
-        return gradeSum / totalCourses;
+        return gradeCalculator.calculateOverallAverage(studentId);
     }
 
+    /**
+     * Get total grade count - delegates to repository
+     */
     public int getGradeCount() {
-        return gradeCount;
+        return gradeRepository.getGradeCount();
     }
 
+    /**
+     * Get all grades as array - delegates to repository
+     */
     public Grade[] getGrades() {
-        return grades;
+        return gradeRepository.getGrades();
+    }
+    
+    /**
+     * Get all grades as list - delegates to repository
+     */
+    public List<Grade> getGradeHistory() {
+        return gradeRepository.getAllGrades();
     }
 
-    // Getting the number of enrolled subjects for students
-    // This is to be used in the Student class where we display the
-    // number of enrolled subjects in the students table
+    /**
+     * Get number of enrolled subjects - delegates to repository
+     */
     public int getEnrolledSubjectsCount(String studentId) {
-        int subjectCount = 0;
-
-        for (Grade grade : grades) {
-            if (grade == null) continue;
-
-            if (grade.getStudentId().equals(studentId)) {
-                subjectCount++;
-            }
+        return gradeRepository.getEnrolledSubjectsCount(studentId);
+    }
+    
+    /**
+     * Get unique courses - delegates to repository
+     */
+    public Set<String> getUniqueCourses() {
+        return gradeRepository.getUniqueCourses();
+    }
+    
+    /**
+     * Update GPA ranking - delegates to ranking service
+     */
+    public void updateGPARanking(Student student, double gpa) {
+        rankingService.updateGPARanking(student, gpa);
+    }
+    
+    /**
+     * Get sorted GPA rankings - delegates to ranking service
+     */
+    public Map<Double, List<Student>> getGPARankings() {
+        return rankingService.getGPARankings();
+    }
+    
+    /**
+     * Remove grade - delegates to repository and logs audit
+     */
+    public boolean removeGrade(Grade grade) {
+        boolean removed = gradeRepository.removeGrade(grade);
+        if (removed) {
+            auditService.logGradeDeleted(grade);
+            statisticsService.clearStatisticsCache();
         }
-
-        return subjectCount;
+        return removed;
+    }
+    
+    /**
+     * Schedule task - delegates to task scheduler
+     */
+    public void scheduleTask(Task task) {
+        taskScheduler.scheduleTask(task);
+    }
+    
+    /**
+     * Process next task - delegates to task scheduler
+     */
+    public Task processNextTask() {
+        return taskScheduler.processNextTask();
+    }
+    
+    /**
+     * Peek next task - delegates to task scheduler
+     */
+    public Task peekNextTask() {
+        return taskScheduler.peekNextTask();
+    }
+    
+    /**
+     * Get pending task count - delegates to task scheduler
+     */
+    public int getPendingTaskCount() {
+        return taskScheduler.getPendingTaskCount();
+    }
+    
+    /**
+     * Check if has pending tasks - delegates to task scheduler
+     */
+    public boolean hasPendingTasks() {
+        return taskScheduler.hasPendingTasks();
+    }
+    
+    /**
+     * Get subject grades - delegates to repository
+     */
+    public Map<String, List<Grade>> getSubjectGrades() {
+        return gradeRepository.getSubjectGrades();
+    }
+    
+    /**
+     * Get grades by subject - delegates to repository
+     */
+    public List<Grade> getGradesBySubject(String subjectName) {
+        return gradeRepository.getGradesBySubject(subjectName);
+    }
+    
+    /**
+     * Get statistics with caching - delegates to statistics service
+     */
+    public Statistics getStatistics(String cacheKey, Supplier<Statistics> calculator) {
+        return statisticsService.getStatistics(cacheKey, calculator);
+    }
+    
+    /**
+     * Clear statistics cache - delegates to statistics service
+     */
+    public void clearStatisticsCache() {
+        statisticsService.clearStatisticsCache();
+    }
+    
+    /**
+     * Add audit entry - delegates to audit service
+     */
+    public void addAuditEntry(AuditEntry entry) {
+        auditService.addAuditEntry(entry);
+    }
+    
+    /**
+     * Drain audit log - delegates to audit service
+     */
+    public List<AuditEntry> drainAuditLog() {
+        return auditService.drainAuditLog();
+    }
+    
+    /**
+     * Get audit log size - delegates to audit service
+     */
+    public int getAuditLogSize() {
+        return auditService.getAuditLogSize();
     }
 }

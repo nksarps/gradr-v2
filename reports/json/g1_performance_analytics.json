@@ -1,0 +1,29 @@
+{
+  "student": {
+    "id": "STU001",
+    "name": "Nana Kwaku",
+    "type": "Regular",
+    "overallAverage": 94.00,
+    "totalGrades": 2
+  },
+  "grades": [
+    {
+      "gradeId": "GRD001",
+      "date": "2025-12-16",
+      "subject": "Mathematics",
+      "type": "Core",
+      "grade": 98.0
+    },
+    {
+      "gradeId": "GRD002",
+      "date": "2025-12-16",
+      "subject": "Music",
+      "type": "Elective",
+      "grade": 90.0
+    }
+  ],
+  "metadata": {
+    "exportDate": "2025-12-16T18:03:39.096852",
+    "reportType": "Performance Analytics"
+  }
+}

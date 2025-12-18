@@ -1,0 +1,50 @@
+{
+  "student": {
+    "id": "STU001",
+    "name": "Nana Kwaku",
+    "type": "Regular",
+    "overallAverage": 88.20,
+    "totalGrades": 5
+  },
+  "grades": [
+    {
+      "gradeId": "GRD001",
+      "date": "2025-12-16",
+      "subject": "Mathematics",
+      "type": "Core",
+      "grade": 85.0
+    },
+    {
+      "gradeId": "GRD002",
+      "date": "2025-12-16",
+      "subject": "English",
+      "type": "Core",
+      "grade": 92.0
+    },
+    {
+      "gradeId": "GRD003",
+      "date": "2025-12-16",
+      "subject": "Science",
+      "type": "Core",
+      "grade": 87.0
+    },
+    {
+      "gradeId": "GRD004",
+      "date": "2025-12-16",
+      "subject": "Music",
+      "type": "Elective",
+      "grade": 88.0
+    },
+    {
+      "gradeId": "GRD005",
+      "date": "2025-12-16",
+      "subject": "Art",
+      "type": "Elective",
+      "grade": 89.0
+    }
+  ],
+  "metadata": {
+    "exportDate": "2025-12-16T19:07:18.5968543",
+    "reportType": "Summary Report"
+  }
+}

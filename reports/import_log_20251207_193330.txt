@@ -1,9 +1,0 @@
-BULK IMPORT LOG
-_______________________________________________
-
-Source File: term_one_grades.csv
-Import Date: 2025-12-07
-Total Rows: 26
-Successfully Imported: 26
-Failed: 0
-
