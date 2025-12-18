@@ -1,0 +1,104 @@
+StudentName,Age,studentEmail,phone,studentType
+John Smith,20,john.smith@university.edu,123-456-7890,1
+Emily Johnson,21,emily.johnson@university.edu,(555) 123-4567,2
+Michael Brown,19,michael.brown@university.edu,+1-555-987-6543,1
+Sarah Davis,22,sarah.davis@university.edu,5559876543,2
+David Wilson,20,david.wilson@university.edu,555-321-0987,1
+Jennifer Martinez,19,jennifer.martinez@university.edu,123-555-7890,1
+Robert Garcia,23,robert.garcia@university.edu,(555) 234-5678,2
+Lisa Rodriguez,20,lisa.rodriguez@university.edu,+1-555-876-5432,1
+William Lee,22,william.lee@university.edu,5558765432,2
+Jessica Walker,21,jessica.walker@university.edu,555-432-1098,1
+James Hall,19,james.hall@university.edu,123-666-7890,2
+Amanda Allen,20,amanda.allen@university.edu,(555) 345-6789,1
+Christopher Young,24,christopher.young@university.edu,+1-555-765-4321,1
+Michelle King,21,michelle.king@university.edu,5557654321,2
+Matthew Wright,22,matthew.wright@university.edu,555-543-2109,1
+Ashley Lopez,19,ashley.lopez@university.edu,123-777-8901,2
+Daniel Hill,23,daniel.hill@university.edu,(555) 456-7890,1
+Stephanie Scott,20,stephanie.scott@university.edu,+1-555-654-3210,1
+Joshua Green,21,joshua.green@university.edu,5556543210,2
+Lauren Adams,22,lauren.adams@university.edu,555-654-3210,1
+Andrew Baker,19,andrew.baker@university.edu,123-888-9012,1
+Nicole Nelson,20,nicole.nelson@university.edu,(555) 567-8901,2
+Ryan Carter,24,ryan.carter@university.edu,+1-555-543-2108,1
+Megan Mitchell,21,megan.mitchell@university.edu,5555432108,2
+Kevin Perez,22,kevin.perez@university.edu,555-765-4321,1
+Rachel Roberts,19,rachel.roberts@university.edu,123-999-0123,2
+Brandon Turner,23,brandon.turner@university.edu,(555) 678-9012,1
+Amy Phillips,20,amy.phillips@university.edu,+1-555-432-1097,1
+Tyler Campbell,21,tyler.campbell@university.edu,5554321097,2
+Brittany Parker,22,brittany.parker@university.edu,555-876-5432,1
+Justin Evans,19,justin.evans@university.edu,234-111-2345,1
+Samantha Edwards,20,samantha.edwards@university.edu,(555) 789-0123,2
+Jonathan Collins,24,jonathan.collins@university.edu,+1-555-321-0986,1
+Heather Stewart,21,heather.stewart@university.edu,5553210986,2
+Nathan Morris,22,nathan.morris@university.edu,555-987-6543,1
+Melissa Rogers,19,melissa.rogers@university.edu,234-222-3456,2
+Eric Reed,23,eric.reed@university.edu,(555) 890-1234,1
+Kimberly Cook,20,kimberly.cook@university.edu,+1-555-210-9875,1
+Brian Morgan,21,brian.morgan@university.edu,5552109875,2
+Crystal Bell,22,crystal.bell@university.edu,555-098-7654,1
+Jason Murphy,19,jason.murphy@university.edu,234-333-4567,1
+Amber Bailey,20,amber.bailey@university.edu,(555) 901-2345,2
+Aaron Rivera,24,aaron.rivera@university.edu,+1-555-109-8764,1
+Tiffany Cooper,21,tiffany.cooper@university.edu,5551098764,2
+Jeremy Richardson,22,jeremy.richardson@university.edu,555-109-8765,1
+Danielle Cox,19,danielle.cox@university.edu,234-444-5678,2
+Kyle Howard,23,kyle.howard@university.edu,(555) 012-3456,1
+Courtney Ward,20,courtney.ward@university.edu,+1-555-098-7653,1
+Travis Torres,21,travis.torres@university.edu,5550987653,2
+Kristen Peterson,22,kristen.peterson@university.edu,555-210-9876,1
+Adam Gray,19,adam.gray@university.edu,234-555-6789,1
+Chelsea Ramirez,20,chelsea.ramirez@university.edu,(555) 123-4568,2
+Marcus James,24,marcus.james@university.edu,+1-555-987-6542,1
+Miranda Watson,21,miranda.watson@university.edu,5559876542,2
+Austin Brooks,22,austin.brooks@university.edu,555-321-0988,1
+Angela Kelly,19,angela.kelly@university.edu,234-666-7890,2
+Carl Sanders,23,carl.sanders@university.edu,(555) 234-5679,1
+Vanessa Price,20,vanessa.price@university.edu,+1-555-876-5431,1
+Gregory Bennett,21,gregory.bennett@university.edu,5558765431,2
+Katherine Wood,22,katherine.wood@university.edu,555-432-1099,1
+Sean Barnes,19,sean.barnes@university.edu,234-777-8901,1
+Rebecca Ross,20,rebecca.ross@university.edu,(555) 345-6780,2
+Douglas Henderson,24,douglas.henderson@university.edu,+1-555-765-4320,1
+Christina Coleman,21,christina.coleman@university.edu,5557654320,2
+Patrick Jenkins,22,patrick.jenkins@university.edu,555-543-2100,1
+Erica Perry,19,erica.perry@university.edu,234-888-9012,2
+Dennis Powell,23,dennis.powell@university.edu,(555) 456-7891,1
+Monica Long,20,monica.long@university.edu,+1-555-654-3211,1
+Keith Patterson,21,keith.patterson@university.edu,5556543211,2
+Veronica Hughes,22,veronica.hughes@university.edu,555-654-3211,1
+Raymond Flores,19,raymond.flores@university.edu,234-999-0123,1
+Kathryn Washington,20,kathryn.washington@university.edu,(555) 567-8902,2
+Randy Butler,24,randy.butler@university.edu,+1-555-543-2107,1
+Jacqueline Simmons,21,jacqueline.simmons@university.edu,5555432107,2
+Albert Foster,22,albert.foster@university.edu,555-765-4322,1
+Teresa Gonzales,19,teresa.gonzales@university.edu,345-111-2345,2
+Gerald Bryant,23,gerald.bryant@university.edu,(555) 678-9013,1
+Julia Alexander,20,julia.alexander@university.edu,+1-555-432-1096,1
+Keith Russell,21,keith.russell@university.edu,5554321096,2
+Diana Griffin,22,diana.griffin@university.edu,555-876-5433,1
+Larry Diaz,19,larry.diaz@university.edu,345-222-3456,1
+Cheryl Hayes,20,cheryl.hayes@university.edu,(555) 789-0124,2
+Willie Myers,24,willie.myers@university.edu,+1-555-321-0985,1
+Jean Ford,21,jean.ford@university.edu,5553210985,2
+Roy Hamilton,22,roy.hamilton@university.edu,555-987-6544,1
+Phyllis Graham,19,phyllis.graham@university.edu,345-333-4567,2
+Russell Sullivan,23,russell.sullivan@university.edu,(555) 890-1235,1
+Joyce Wallace,20,joyce.wallace@university.edu,+1-555-210-9874,1
+Eugene Woods,21,eugene.woods@university.edu,5552109874,2
+Marie Cole,22,marie.cole@university.edu,555-098-7655,1
+Philip West,19,philip.west@university.edu,345-444-5678,1
+Carolyn Jordan,20,carolyn.jordan@university.edu,(555) 901-2346,2
+Todd Owens,24,todd.owens@university.edu,+1-555-109-8763,1
+Denise Reynolds,21,denise.reynolds@university.edu,5551098763,2
+Craig Fisher,22,craig.fisher@university.edu,555-109-8766,1
+Andrea Ellis,19,andrea.ellis@university.edu,345-555-6789,2
+Alan Gibson,23,alan.gibson@university.edu,(555) 012-3457,1
+Gloria McDonald,20,gloria.mcdonald@university.edu,+1-555-098-7652,1
+Henry Cruz,21,henry.cruz@university.edu,5550987652,2
+Kathleen Marshall,22,kathleen.marshall@university.edu,555-210-9877,1
+Arthur Ortiz,19,arthur.ortiz@university.edu,345-666-7890,1
+Frances Gomez,20,frances.gomez@university.edu,(555) 123-4569,2
+Joe Murray,24,joe.murray@university.edu,+1-555-987-6541,1
