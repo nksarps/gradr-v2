@@ -59,7 +59,7 @@ public class MenuHandler {
                 ui.displayError("Error: " + e.getMessage());
             }
             
-        } while (choice != 19);
+        } while (choice != 20);
         
         System.out.println("Thank you for using Student Grade Management System!");
     }
@@ -73,61 +73,64 @@ public class MenuHandler {
                 handleAddStudent();
                 break;
             case 2:
-                handleViewStudents();
+                handleBulkStudentImport();
                 break;
             case 3:
-                handleRecordGrade();
+                handleViewStudents();
                 break;
             case 4:
-                handleViewGradeReport();
+                handleRecordGrade();
                 break;
             case 5:
-                handleExportReport();
+                handleViewGradeReport();
                 break;
             case 6:
-                handleImportData();
+                handleExportReport();
                 break;
             case 7:
-                handleBulkImport();
+                handleImportData();
                 break;
             case 8:
-                handleCalculateGPA();
+                handleBulkImport();
                 break;
             case 9:
-                handleClassStatistics();
+                handleCalculateGPA();
                 break;
             case 10:
-                handleStatisticsDashboard();
+                handleClassStatistics();
                 break;
             case 11:
-                handleBatchReports();
+                handleStatisticsDashboard();
                 break;
             case 12:
-                handleAdvancedSearch();
+                handleBatchReports();
                 break;
             case 13:
-                handlePatternSearch();
+                handleAdvancedSearch();
                 break;
             case 14:
-                handleQueryGradeHistory();
+                handlePatternSearch();
                 break;
             case 15:
-                handleScheduleTasks();
+                handleQueryGradeHistory();
                 break;
             case 16:
-                handleSystemPerformance();
+                handleScheduleTasks();
                 break;
             case 17:
-                handleCacheManagement();
+                handleSystemPerformance();
                 break;
             case 18:
-                handleAuditTrail();
+                handleCacheManagement();
                 break;
             case 19:
+                handleAuditTrail();
+                break;
+            case 20:
                 // Exit
                 break;
             default:
-                ui.displayError("X ERROR: InvalidMenuChoiceException\n   Please select a valid option (1-19).");
+                ui.displayError("X ERROR: InvalidMenuChoiceException\n   Please select a valid option (1-20).");
                 break;
         }
     }
@@ -199,6 +202,131 @@ public class MenuHandler {
         }
         System.out.printf("Status: %s\n", student.getStatus());
         System.out.println();
+    }
+    
+    private void handleBulkStudentImport() throws Exception {
+        System.out.println("ADD BULK STUDENTS FROM CSV");
+        System.out.println("_______________________________________________");
+        System.out.println();
+        System.out.println("CSV Format: StudentName, Age, studentEmail, phone, studentType");
+        System.out.println("StudentType: 1 = Regular, 2 = Honors");
+        System.out.println();
+        
+        long startTime = System.currentTimeMillis();
+        
+        System.out.print("Enter CSV file name (without extension): ");
+        String fileName = ui.getScanner().nextLine();
+        
+        // Construct full file path with imports directory and .csv extension
+        String filePath = "imports/" + fileName + ".csv";
+        
+        try {
+            java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.FileReader(filePath));
+            String line;
+            boolean isFirstLine = true;
+            int successCount = 0;
+            int errorCount = 0;
+            java.util.List<String> errors = new java.util.ArrayList<>();
+            
+            while ((line = reader.readLine()) != null) {
+                // Skip header line
+                if (isFirstLine) {
+                    isFirstLine = false;
+                    continue;
+                }
+                
+                // Skip empty lines
+                if (line.trim().isEmpty()) {
+                    continue;
+                }
+                
+                // Split by comma
+                String[] data = line.split(",");
+                
+                // Validate data has correct number of fields
+                if (data.length != 5) {
+                    errors.add("Invalid data format: " + line);
+                    errorCount++;
+                    continue;
+                }
+                
+                try {
+                    // Trim whitespace from each field
+                    String name = data[0].trim();
+                    int age = Integer.parseInt(data[1].trim());
+                    String email = data[2].trim();
+                    String phone = data[3].trim();
+                    int studentType = Integer.parseInt(data[4].trim());
+                    
+                    // Validate inputs
+                    ValidationUtils.validateName(name);
+                    ValidationUtils.validateEmail(email);
+                    ValidationUtils.validatePhone(phone);
+                    
+                    // Validate student type
+                    if (studentType != 1 && studentType != 2) {
+                        throw new IllegalArgumentException("Student type must be 1 (Regular) or 2 (Honors)");
+                    }
+                    
+                    // Create student using factory
+                    Student student = StudentFactory.createStudent(studentType, name, age, email, phone);
+                    studentManager.addStudent(student);
+                    student.setGradeManager(gradeManager);
+                    
+                    // Cache the new student
+                    cacheManager.put("student:" + student.getStudentId(), student, CacheManager.CacheType.STUDENT);
+                    
+                    successCount++;
+                    
+                } catch (Exception e) {
+                    errors.add("Error processing line: " + line + " - " + e.getMessage());
+                    errorCount++;
+                }
+            }
+            
+            reader.close();
+            
+            // Display results
+            System.out.println();
+            System.out.println("IMPORT RESULTS");
+            System.out.println("_______________________________________________");
+            System.out.printf("Successfully imported: %d students\n", successCount);
+            System.out.printf("Errors: %d\n", errorCount);
+            
+            if (!errors.isEmpty()) {
+                System.out.println("\nError Details:");
+                for (String error : errors) {
+                    System.out.println("  - " + error);
+                }
+            }
+            
+            // Audit log
+            long executionTime = System.currentTimeMillis() - startTime;
+            context.getAuditLogger().log("BULK_STUDENT_IMPORT", 
+                "Imported " + successCount + " students from CSV", 
+                executionTime, true, null, 
+                "File: " + filePath + ", Errors: " + errorCount);
+            
+            System.out.println();
+            
+        } catch (java.io.FileNotFoundException e) {
+            ui.displayError("X ERROR: FileNotFoundException\n   File not found: " + filePath);
+            
+            // Audit log for failure
+            long executionTime = System.currentTimeMillis() - startTime;
+            context.getAuditLogger().log("BULK_STUDENT_IMPORT", 
+                "Failed to import students from CSV", 
+                executionTime, false, "FileNotFoundException: " + filePath, null);
+                
+        } catch (java.io.IOException e) {
+            ui.displayError("X ERROR: IOException\n   Error reading file: " + e.getMessage());
+            
+            // Audit log for failure
+            long executionTime = System.currentTimeMillis() - startTime;
+            context.getAuditLogger().log("BULK_STUDENT_IMPORT", 
+                "Failed to import students from CSV", 
+                executionTime, false, "IOException: " + e.getMessage(), null);
+        }
     }
     
     private void handleViewStudents() {
