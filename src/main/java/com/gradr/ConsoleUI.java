@@ -35,38 +35,39 @@ public class ConsoleUI {
 
         System.out.println("STUDENT MANAGEMENT");
         System.out.println("1. Add Student (with validation)");
-        System.out.println("2. View Students");
-        System.out.println("3. Record Grade");
-        System.out.println("4. View Grade Report");
+        System.out.println("2. Add Bulk Students from CSV [NEW]");
+        System.out.println("3. View Students");
+        System.out.println("4. Record Grade");
+        System.out.println("5. View Grade Report");
         System.out.println();
 
         System.out.println("FILE OPERATIONS");
-        System.out.println("5. Export Grade Report (CSV/JSON/Binary)");
-        System.out.println("6. Import Data (Multi-format support) [ENHANCED]");
-        System.out.println("7. Bulk Import Grades");
+        System.out.println("6. Export Grade Report (CSV/JSON/Binary)");
+        System.out.println("7. Import Data (Multi-format support) [ENHANCED]");
+        System.out.println("8. Bulk Import Grades");
         System.out.println();
 
         System.out.println("ANALYTICS & REPORTING");
-        System.out.println("8. Calculate Student GPA");
-        System.out.println("9. View Class Statistics");
-        System.out.println("10. Real-Time Statistics Dashboard [NEW]");
-        System.out.println("11. Generate Batch Reports [NEW]");
+        System.out.println("9. Calculate Student GPA");
+        System.out.println("10. View Class Statistics");
+        System.out.println("11. Real-Time Statistics Dashboard [NEW]");
+        System.out.println("12. Generate Batch Reports [NEW]");
         System.out.println();
 
         System.out.println("SEARCH & QUERY");
-        System.out.println("12. Search Students (Advanced) [ENHANCED]");
-        System.out.println("13. Pattern-Based Search [NEW]");
-        System.out.println("14. Query Grade History [NEW]");
+        System.out.println("13. Search Students (Advanced) [ENHANCED]");
+        System.out.println("14. Pattern-Based Search [NEW]");
+        System.out.println("15. Query Grade History [NEW]");
         System.out.println();
 
         System.out.println("ADVANCED FEATURES");
-        System.out.println("15. Schedule Automated Tasks [NEW]");
-        System.out.println("16. View System Performance [NEW]");
-        System.out.println("17. Cache Management [NEW]");
-        System.out.println("18. Audit Trail Viewer [NEW]");
+        System.out.println("16. Schedule Automated Tasks [NEW]");
+        System.out.println("17. View System Performance [NEW]");
+        System.out.println("18. Cache Management [NEW]");
+        System.out.println("19. Audit Trail Viewer [NEW]");
         System.out.println();
 
-        System.out.println("19. Exit");
+        System.out.println("20. Exit");
         System.out.println();
     }
     
@@ -81,7 +82,7 @@ public class ConsoleUI {
             System.out.println();
             return choice;
         } catch (InputMismatchException e) {
-            System.out.println("\n\nX ERROR: InvalidMenuChoiceException\n   Please enter a valid number (1-19).\n");
+            System.out.println("\n\nX ERROR: InvalidMenuChoiceException\n   Please enter a valid number (1-20).\n");
             System.out.println();
             scanner.nextLine();
             return -1; // Invalid choice
